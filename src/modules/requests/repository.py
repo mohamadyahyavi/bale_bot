@@ -1,0 +1,137 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .model import RequestModel
+from .entity import RequestEntity
+
+
+
+class RequestRepository:
+
+
+    def __init__(
+        self,
+        session: AsyncSession
+    ):
+
+        self.session = session
+
+
+
+    def _to_entity(
+        self,
+        model: RequestModel
+    ):
+
+        return RequestEntity(
+
+            id=model.id,
+
+            user_id=model.user_id,
+
+            manager_id=model.manager_id,
+
+            type=model.type,
+
+            status=model.status,
+
+            data=model.data,
+
+            created_at=model.created_at,
+
+            processed_at=model.processed_at
+        )
+
+
+
+    async def create(
+        self,
+        request: RequestEntity
+    ):
+
+
+        model = RequestModel(
+
+            user_id=request.user_id,
+
+            manager_id=request.manager_id,
+
+            type=request.type.value,
+
+            status=request.status.value,
+
+            data=request.data
+
+        )
+
+
+        self.session.add(model)
+
+
+        await self.session.commit()
+
+
+        await self.session.refresh(model)
+
+
+        return self._to_entity(model)
+
+
+
+
+    async def get_by_manager(
+        self,
+        manager_id
+    ):
+
+
+        stmt = select(RequestModel).where(
+
+            RequestModel.manager_id == manager_id
+
+        )
+
+
+        result = await self.session.execute(stmt)
+
+
+        requests = result.scalars().all()
+
+
+        return [
+
+            self._to_entity(r)
+
+            for r in requests
+
+        ]
+
+
+
+
+    async def get_by_user(
+        self,
+        user_id
+    ):
+
+
+        stmt = select(RequestModel).where(
+
+            RequestModel.user_id == user_id
+
+        )
+
+
+        result = await self.session.execute(stmt)
+
+
+        requests = result.scalars().all()
+
+
+        return [
+
+            self._to_entity(r)
+
+            for r in requests
+
+        ]
