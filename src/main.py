@@ -1,25 +1,17 @@
 from fastapi import FastAPI
+import httpx
 
-from src.modules.users.presentation.routes.user_routes import (
-    router as user_router
-)
-from src.modules.departments.presentation.routes.department_routes import (
-    router as department_router
-)
+from src.core.config import settings
 
-from src.modules.requests.presentation.routes.request_routes import router as request_router
+app = FastAPI()
 
-app = FastAPI(
-    title="Bale HR Bot",
-    version="1.0.0"
-)
+@app.on_event("startup")
+async def startup():
+    app.state.http_client = httpx.AsyncClient(
+        base_url=f"{settings.BALE_API_URL}{settings.BALE_BOT_TOKEN}"
+    )
 
-app.include_router(user_router)
-app.include_router(department_router)
-app.include_router(request_router)
 
-@app.get("/")
-async def root():
-    return {
-        "status": "running"
-    }
+@app.on_event("shutdown")
+async def shutdown():
+    await app.state.http_client.aclose()

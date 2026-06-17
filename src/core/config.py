@@ -18,12 +18,13 @@ class Settings(BaseSettings):
     # -------------------------
     # SECURITY (future use)
     # -------------------------
-    SECRET_KEY: str
+    
 
     # -------------------------
     # BALE
     # -------------------------
-    BALE_BOT_TOKEN: str | None = None
+    BALE_API_URL: str
+    BALE_BOT_TOKEN: str 
 
     # -------------------------
     # KIMAI

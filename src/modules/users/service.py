@@ -71,7 +71,7 @@ class UserService:
 
 
 
-    async def get_hr_users(self):
+    async def get_hr_user(self):
 
         return await self.user_repository.get_hr_users()
 

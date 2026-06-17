@@ -101,7 +101,7 @@ class UserRepository:
 
 
 
-    async def get_hr_users(self):
+    async def get_hr_user(self):
 
         stmt = select(UserModel).where(
             UserModel.access_level == "HR"

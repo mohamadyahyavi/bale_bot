@@ -6,8 +6,14 @@ class BaleClient:
     async def send_message(self, chat_id: str, text: str, keyboard=None):
         payload = {
             "chat_id": chat_id,
-            "text": text,
-            "reply_markup": keyboard
+            "text": text
+            
         }
 
-        await self.http.post("/sendMessage", json=payload)
+        if keyboard:
+
+            payload["reply_markup"] = keyboard
+
+        response = await self.http.post("/sendMessage", json=payload)
+
+        return response.json()

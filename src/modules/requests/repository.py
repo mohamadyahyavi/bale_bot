@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .model import RequestModel
 from .entity import RequestEntity
+from ..users import UserModel
+
 
 
 
@@ -78,6 +80,33 @@ class RequestRepository:
 
 
 
+    async def get_by_id(
+    self,
+    request_id
+):
+
+        stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.id == request_id
+        )
+    )
+
+
+        result = await self.session.execute(stmt)
+
+
+        request = result.scalar_one_or_none()
+
+
+        if not request:
+           return None
+
+
+        return self._to_entity(request)    
+
+
+
 
     async def get_by_manager(
         self,
@@ -135,3 +164,30 @@ class RequestRepository:
             for r in requests
 
         ]
+    
+
+    async def get_by_department(
+    self,
+    department_id
+):
+
+     stmt = (
+        select(RequestModel)
+        .join(
+            UserModel,
+            RequestModel.user_id == UserModel.id
+        )
+        .where(
+            UserModel.department_id == department_id
+        )
+    )
+
+
+     result = await self.session.execute(stmt)
+     requests = result.scalars().all()
+     return [
+        self._to_entity(r)
+        for r in requests
+    ]
+
+    

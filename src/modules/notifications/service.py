@@ -1,84 +1,94 @@
-from .entity import NotificationEntity
-
+from src.modules.requests.enums import RequestType
+from src.modules.requests.enums import RequestStatus
+from src.integrations.bale.client import BaleClient as bale
 
 class NotificationService:
 
-    def __init__(self, repository, bale_client):
-        self.repo = repository
-        self.bale = bale_client
 
-
-    async def _send_to_bale(self, user_id, title, message):
-
-        await self.bale.send_message(
-            user_id,
-            f"{title}\n\n{message}"
-        )
-
-
-    async def notify(
+    async def notify_new_request(
         self,
-        user_id,
-        title: str,
-        message: str,
-        send_to_bale: bool = True
+        manager_id,
+        first_name,
+        last_name,
+        request_type: RequestType
     ):
 
-        notification = NotificationEntity(
-            user_id=user_id,
-            title=title,
-            message=message,
-            status="SENT" if send_to_bale else "PENDING"
+        request_type_text = {
+
+            RequestType.LEAVE.value: "مرخصی 🏖️",
+
+            RequestType.REMOTE.value: "دورکاری 🏠",
+
+            RequestType.OVERTIME.value: "اضافه کاری ⏱️",
+
+            RequestType.MISSION.value: "ماموریت 🚗"
+
+        }.get(
+            request_type.value,
+            request_type.value
         )
-
-        saved = await self.repo.create(notification)
-
-        try:
-            if send_to_bale:
-                await self._send_to_bale(user_id, title, message)
-
-        except Exception:
-            # در صورت fail شدن ارسال
-            saved.status = "FAILED"
-
-        return saved
-
-
-    # -------------------------
-    # BUSINESS METHODS
-    # -------------------------
-
-    async def notify_new_request(self, manager_id, first_name, last_name, request_type):
 
         message = (
             "📌 درخواست جدید ثبت شد\n\n"
             f"👤 کارمند: {first_name} {last_name}\n"
-            f"📄 نوع درخواست: {request_type}"
+            f"📄 نوع درخواست: {request_type_text}"
         )
 
-        return await self.notify(
-            user_id=manager_id,
-            title="New Request",
-            message=message
+        return await self.bale.send_message(
+            manager_id,
+            message
         )
 
 
-    async def notify_request_result(self, user_id, first_name, last_name, request_type, status):
+
+    async def notify_request_result(
+        self,
+        user_id,
+        first_name,
+        last_name,
+        request_type: RequestType,
+        status: RequestStatus
+    ):
+
+
+        request_type_text = {
+
+            RequestType.LEAVE.value: "مرخصی 🏖️",
+
+            RequestType.REMOTE.value: "دورکاری 🏠",
+
+            RequestType.OVERTIME.value: "اضافه کاری ⏱️",
+
+            RequestType.MISSION.value: "ماموریت 🚗"
+
+        }.get(
+            request_type.value,
+            request_type.value
+        )
+
 
         status_text = {
-            "APPROVED": "تایید شد ✔️",
-            "REJECTED": "رد شد ❌"
-        }.get(status, status)
+
+            RequestStatus.ACCEPTED.value:
+                "تایید شد ✔️",
+
+            RequestStatus.REJECTED.value:
+                "رد شد ❌"
+
+        }.get(
+            status.value,
+            status.value
+        )
+
 
         message = (
             "📢 وضعیت درخواست شما تغییر کرد\n\n"
             f"👤 کارمند: {first_name} {last_name}\n"
-            f"📄 نوع درخواست: {request_type}\n"
+            f"📄 نوع درخواست: {request_type_text}\n"
             f"📊 وضعیت: {status_text}"
         )
-
-        return await self.notify(
-            user_id=user_id,
-            title="Request Update",
-            message=message
+    
+        return await self.bale.send_message(
+            user_id,
+            message
         )
