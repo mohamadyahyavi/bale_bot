@@ -36,7 +36,7 @@ class UserHandler:
 
 
         if permissions["can_create_request"]:
-            menu.append(["Request New"])
+            menu.append(["create_request"])
 
 
         if permissions["can_view_own_requests"]:
@@ -44,7 +44,7 @@ class UserHandler:
 
 
         if permissions["can_view_department_requests"]:
-            menu.append(["Department Requests"])
+            menu.append(["Team Requests"])
 
 
         if permissions["can_view_all_requests"]:

@@ -1,12 +1,10 @@
 from datetime import datetime
-
+from uuid import UUID
 from .entity import RequestEntity
 from .repository import RequestRepository
 from ..users.repository import UserRepository
 from ..users.service import UserService
-from ..users.entity import UserEntity
-from ..notifications.service import NotificationService
-
+from ..users.entity import User
 from ..notifications.service import NotificationService
 
 from .enums import (
@@ -62,13 +60,6 @@ class RequestService:
         )
 
 
-        if not manager_id:
-
-            raise Exception(
-                "Manager not found"
-            )
-
-
 
         request = RequestEntity(
 
@@ -94,9 +85,12 @@ class RequestService:
 
 
 
-        await self.notification_service.notify_user(
+        await self.notification_service.notify_new_request(
 
             manager_id,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            request_type=RequestType(request_type)
 
             "New request waiting for approval"
 
@@ -160,7 +154,32 @@ class RequestService:
         user = await self.user_repository.get_by_id(
         request.user_id
     )
-        
+
+        if request.type == RequestType.LEAVE.value:
+
+           data = request.data or {}
+
+           start = data.get("start_datetime")
+           end = data.get("end_datetime")
+
+           if start and end:
+
+              try:
+                start_dt = datetime.fromisoformat(start)
+                end_dt = datetime.fromisoformat(end)
+
+                hours = (end_dt - start_dt).total_seconds() / 3600
+
+              except Exception:
+                raise Exception("Invalid datetime format")
+
+              user.total_leave_hours = (
+                (user.total_leave_hours or 0) + hours
+            )
+
+              await self.user_repository.update(user)
+
+         
         await self.notification_service.notify_request_result(
         user_id=user.bale_user_id,
 
@@ -173,7 +192,7 @@ class RequestService:
         status=RequestStatus.ACCEPTED
     )
         
-        hr_user = await self.user_repository.get_hr_users()
+        hr = await self.user_repository.get_hr_users()
 
         await self.notification_service.notify_request_result(
                 user_id=hr.bale_user_id,
@@ -232,7 +251,7 @@ class RequestService:
         status=RequestStatus.ACCEPTED
     )
         
-        hr_user = await self.user_repository.get_hr_users()
+        hr = await self.user_repository.get_hr_users()
 
         await self.notification_service.notify_request_result(
                 user_id=hr.bale_user_id,

@@ -8,15 +8,18 @@ def request_types_keyboard():
         "one_time_keyboard": True
     }
 
-def approval_keyboard(request_id):
 
-    return {
-        "keyboard": [
-            [
-                f"APPROVE:{request_id}",
-                f"REJECT:{request_id}"
-            ]
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": True
-    }
+def request_action_keyboard(request_id):
+
+    return [
+        [
+            {
+                "text": "Approve ✅",
+                "callback_data": f"approve_request:{request_id}"
+            },
+            {
+                "text": "Reject ❌",
+                "callback_data": f"reject_request:{request_id}"
+            }
+        ]
+    ]

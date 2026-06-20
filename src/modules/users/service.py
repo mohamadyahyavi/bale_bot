@@ -1,12 +1,13 @@
 from uuid import UUID
-
+from .entity import User
+from .repository import UserRepository
 
 class UserService:
 
 
     def __init__(
         self,
-        user_repository
+        user_repository:UserRepository
     ):
         self.user_repository = user_repository
 

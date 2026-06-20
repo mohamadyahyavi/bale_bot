@@ -4,75 +4,236 @@ from src.modules.requests.enums import RequestType
 class RequestFormEngine:
 
     FORMS = {
-        RequestType.LEAVE.value: [
-            "leave_type",      # DAILY / HOURLY
-            "start_datetime",
-            "end_datetime",
-            "reason"
-        ],
 
-        RequestType.REMOTE.value: [
-            "date",
-            "reason"
-        ],
+        RequestType.LEAVE.value: {
 
-        RequestType.OVERTIME.value: [
-            "hours",
-            "reason"
-        ],
+            "steps": [
+                "leave_type",
+                "start_datetime",
+                "end_datetime",
+                "reason"
+            ],
 
-        RequestType.MISSION.value: [
-            "destination",
-            "start_datetime",
-            "end_datetime",
-            "reason"
-        ],
+            "questions": {
+
+                "leave_type": "Select leave type (DAILY / HOURLY):",
+
+                "start_datetime": 
+                    "Enter start date/time:",
+
+                "end_datetime":
+                    "Enter end date/time:",
+
+                "reason":
+                    "Write reason:"
+            }
+        },
+
+
+        RequestType.REMOTE.value: {
+
+            "steps": [
+                "date",
+                "reason"
+            ],
+
+            "questions": {
+
+                "date":
+                    "Enter remote work date:",
+
+                "reason":
+                    "Write reason:"
+            }
+        },
+
+
+        RequestType.OVERTIME.value: {
+
+            "steps": [
+                "hours",
+                "reason"
+            ],
+
+            "questions": {
+
+                "hours":
+                    "Enter overtime hours:",
+
+                "reason":
+                    "Write reason:"
+            }
+        },
+
+
+        RequestType.MISSION.value: {
+
+            "steps": [
+                "destination",
+                "start_datetime",
+                "end_datetime",
+                "reason"
+            ],
+
+            "questions": {
+
+                "destination":
+                    "Enter mission destination:",
+
+                "start_datetime":
+                    "Enter start date/time:",
+
+                "end_datetime":
+                    "Enter end date/time:",
+
+                "reason":
+                    "Write reason:"
+            }
+        }
     }
 
-    # -------------------------
+
+    # =========================
+    # GET STEPS
+    # =========================
+
+    def get_steps(self, request_type: str):
+
+        form = self.FORMS.get(request_type)
+
+        if not form:
+            return []
+
+        return form["steps"]
+
+
+
+    # =========================
     # GET FIRST STEP
-    # -------------------------
+    # =========================
+
     def get_first_step(self, request_type: str):
-        return self.FORMS[request_type][0]
 
-    # -------------------------
+        steps = self.get_steps(request_type)
+
+        if not steps:
+            return None
+
+        return steps[0]
+
+
+
+    # =========================
     # GET NEXT STEP
-    # -------------------------
-    def get_next_step(self, request_type: str, current_step: str):
+    # =========================
 
-        steps = self.FORMS.get(request_type, [])
+    def get_next_step(
+        self,
+        request_type: str,
+        current_step: str
+    ):
+
+        steps = self.get_steps(request_type)
 
         if current_step not in steps:
             return None
 
+
         index = steps.index(current_step)
+
 
         if index + 1 >= len(steps):
             return None
 
+
         return steps[index + 1]
 
-    # -------------------------
-    # CHECK FINISH
-    # -------------------------
-    def is_finished(self, request_type: str, current_step: str):
 
-        steps = self.FORMS.get(request_type, [])
 
-        return steps and steps[-1] == current_step
+    # =========================
+    # QUESTION
+    # =========================
 
-    # -------------------------
-    # SIMPLE VALIDATION
-    # -------------------------
-    def validate(self, step: str, value: str) -> bool:
+    def get_question(
+        self,
+        request_type: str,
+        step: str
+    ):
 
-        if step in ["start_datetime", "end_datetime"]:
-            return len(value) > 5
+        form = self.FORMS.get(request_type)
 
-        if step == "hours":
-            return value.isdigit()
+        if not form:
+            return f"Enter {step}"
+
+
+        return form["questions"].get(
+            step,
+            f"Enter {step}"
+        )
+
+
+
+    # =========================
+    # FINISHED
+    # =========================
+
+    def is_finished(
+        self,
+        request_type: str,
+        current_step: str
+    ):
+
+        steps = self.get_steps(request_type)
+
+        if not steps:
+            return False
+
+
+        return steps[-1] == current_step
+
+
+
+    # =========================
+    # VALIDATION
+    # =========================
+
+    def validate(
+        self,
+        step: str,
+        value: str
+    ):
+
+
+        value = value.strip()
+
+
+        if not value:
+            return False
+
+
 
         if step == "leave_type":
-            return value in ["DAILY", "HOURLY"]
 
-        return len(value.strip()) > 0
+            return value.upper() in [
+                "DAILY",
+                "HOURLY"
+            ]
+
+
+
+        if step == "hours":
+
+            return value.isdigit()
+
+
+
+        if step in [
+            "start_datetime",
+            "end_datetime"
+        ]:
+
+            return len(value) >= 5
+
+
+
+        return True

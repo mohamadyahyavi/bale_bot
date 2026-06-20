@@ -1,23 +1,26 @@
-from src.integrations.bale.keyboards import request_types_keyboard
+from src.integrations.bale.keyboards import request_types_keyboard,request_action_keyboard
 from src.modules.requests.enums import RequestType
-from ..client import BaleClient
+from src.integrations.bale.client import BaleClient
 from .request_form_engine import RequestFormEngine
 from src.modules.requests.service import RequestService
 
+
 class RequestHandler:
 
-    def __init__(self, request_service:RequestService, bale_client: BaleClient):
-
+    def __init__(
+        self,
+        request_service: RequestService,
+        bale_client: BaleClient
+    ):
         self.request_service = request_service
         self.bale = bale_client
-
         self.engine = RequestFormEngine()
 
-        # session storage (later move to Redis)
-        self.sessions = {}
+        # session storage (later Redis)
+        self.sessions: dict = {}
 
     # =========================
-    # CHECK FLOW
+    # FLOW CHECK
     # =========================
     async def is_in_flow(self, user_id: str) -> bool:
         return user_id in self.sessions
@@ -47,11 +50,14 @@ class RequestHandler:
         session = self.sessions.get(user_id)
 
         if not session:
-            return await self.start_flow(user_id)
+            return await self.bale.send_message(
+                user_id,
+                "Please start request flow first (/create_request)"
+            )
 
-        # -------------------------
-        # STEP 1: SELECT TYPE
-        # -------------------------
+        # =========================
+        # STEP 1: TYPE SELECTION
+        # =========================
         if session["type"] is None:
 
             valid_types = [
@@ -72,36 +78,34 @@ class RequestHandler:
 
             return await self._ask_next(user_id)
 
-        # -------------------------
-        # STEP 2+: FORM FLOW
-        # -------------------------
+        # =========================
+        # STEP 2+: FORM INPUT
+        # =========================
+        current_step = session["step"]
 
-        step = session["step"]
-
-        if not self.engine.validate(step, text):
-
+        if not self.engine.validate(current_step, text):
             return await self.bale.send_message(
                 user_id,
-                f"Invalid value for {step}"
+                f"Invalid value for {current_step}"
             )
 
-        session["data"][step] = text
+        # save answer
+        session["data"][current_step] = text
 
-        # get next step
         next_step = self.engine.get_next_step(
             session["type"],
-            step
+            current_step
         )
 
-        # finished
+        # =========================
+        # FINISH FLOW
+        # =========================
         if next_step is None:
 
             await self.request_service.create_request(
                 bale_user_id=user_id,
-                request_data={
-                    "type": session["type"],
-                    "data": session["data"]
-                }
+                request_type=session["type"],
+                body=session["data"]
             )
 
             self.sessions.pop(user_id, None)
@@ -111,52 +115,71 @@ class RequestHandler:
                 "Request submitted ✔️"
             )
 
-        # move next step
+        # move next
         session["step"] = next_step
-
         return await self._ask_next(user_id)
 
     # =========================
-    # ASK QUESTION
+    # NEXT QUESTION
     # =========================
     async def _ask_next(self, user_id: str):
 
         session = self.sessions[user_id]
-        step = session["step"]
 
-        questions = {
-            "leave_type": "Daily or Hourly?",
-            "start_datetime": "Enter start date/time:",
-            "end_datetime": "Enter end date/time:",
-            "reason": "Write reason:",
-            "date": "Enter date:",
-            "hours": "How many hours?",
-            "destination": "Where is destination?"
-        }
+        question = self.engine.get_question(
+            session["type"],
+            session["step"]
+        )
 
         return await self.bale.send_message(
             user_id,
-            questions.get(step, f"Enter {step}:")
+            question
         )
 
     # =========================
-    # VIEW METHODS
+    # LIST METHODS
     # =========================
     async def show_my_requests(self, user_id: str):
-        requests = await self.request_service.get_my_requests(user_id)
 
+        requests = await self.request_service.get_user_requests(user_id)
+        
         return await self._format_list(user_id, requests)
 
-    async def show_team_requests(self, user_id: str):
-        requests = await self.request_service.get_team_requests(user_id)
+    async def show_team_requests(self, manager_id: str):
 
-        return await self._format_list(user_id, requests)
+        requests = await self.request_service.get_department_requests(manager_id)
+        return await self._format_list(manager_id, requests)
 
     async def show_all_requests(self, user_id: str):
+
         requests = await self.request_service.get_all_requests()
-
         return await self._format_list(user_id, requests)
+    
+    async def approve_request(self, request_id: str):
 
+          updated_request = await self.request_service.approve_request(request_id)
+
+          await self.bale.send_message(
+          updated_request.manager_id,
+          "Request approved ✔️"
+          )
+
+          return updated_request
+    
+    async def reject_request(self, request_id: str):
+
+          updated_request = await self.request_service.reject_request(request_id)
+
+          await self.bale.send_message(
+          updated_request.manager_id,
+          "Request rejected ❌"
+          )
+
+          return updated_request
+
+    # =========================
+    # FORMAT OUTPUT
+    # =========================
     async def _format_list(self, user_id: str, requests):
 
         if not requests:
@@ -165,9 +188,27 @@ class RequestHandler:
                 "No requests found"
             )
 
-        text = "\n".join([
-            f"{r.user.first_name} | {r.type} | {r.status}"
-            for r in requests
-        ])
+        for r in requests:
 
-        return await self.bale.send_message(user_id, text)
+            body_text = "\n".join(
+            [
+                f"{key}: {value}"
+                for key, value in r.data.items()
+            ]
+        )
+
+
+            message = (
+            "📌 درخواست جدید\n\n"
+            f"👤 کارمند: {r.user.first_name} {r.user.last_name}\n"
+            f"📄 نوع درخواست: {r.type}\n\n"
+            f"📝 جزئیات:\n{body_text}\n\n"
+            f"📊 وضعیت: {r.status}"
+        )
+
+
+            await self.bale.send_message(
+            user_id,
+            message,
+            keyboard=request_action_keyboard(r.id)
+        )

@@ -1,6 +1,8 @@
+import http
+
 class BaleClient:
 
-    def __init__(self, http_client):
+    def __init__(self, http_client:http):
         self.http = http_client
 
     async def send_message(self, chat_id: str, text: str, keyboard=None):

@@ -1,6 +1,9 @@
+from src.modules.users.repository import UserRepository
+from src.modules.departments.repository import DepartmentRepository
+
 class AccessControlService:
 
-    def __init__(self, user_repo, department_repo):
+    def __init__(self, user_repo: UserRepository, department_repo: DepartmentRepository):
         self.user_repo = user_repo
         self.department_repo = department_repo
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession
 )
 
-from core.config import settings
+from src.core.config import settings
 
 
 # -------------------------
@@ -33,7 +33,6 @@ AsyncSessionLocal = async_sessionmaker(
 async def get_db() -> AsyncSession:
 
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+        
+        yield session
+        
