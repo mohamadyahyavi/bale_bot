@@ -15,7 +15,7 @@ from src.modules.requests.service import RequestService
 from src.modules.notifications.service import NotificationService
 from src.core.permissions.access_control import AccessControlService
 from src.core.permissions.permission_service import PermissionService
-
+from src.core.config import settings
 
 
 # =========================
@@ -26,7 +26,7 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     # -------------------------
     # CLIENTS
     # -------------------------
-    bale_client = BaleClient(http_client)
+    bale_client = BaleClient(http_client,BALE_BOT_TOKEN)
 
     # -------------------------
     # REPOSITORIES

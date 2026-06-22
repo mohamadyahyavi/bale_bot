@@ -92,8 +92,6 @@ class RequestService:
             last_name=user.last_name,
             request_type=RequestType(request_type)
 
-            "New request waiting for approval"
-
         )
 
 

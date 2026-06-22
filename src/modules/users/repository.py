@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from datetime import date
 from .entity import User
 from .model import UserModel
 
@@ -111,10 +111,7 @@ class UserRepository:
 
         user = result.scalars().all()
 
-        return [
-            self._to_entity(u)
-            
-        ]
+        return  self._to_entity(user)
     
     async def get_ceo_user(self):
 
@@ -146,4 +143,24 @@ class UserRepository:
         return [
             self._to_entity(u)
             for u in users
+        ]
+    
+
+    async def get_users_with_contract_expiry(
+    self,
+    target_date: date
+    ):
+
+        stmt = select(UserModel).where(
+        UserModel.contract_end_date == target_date,
+        UserModel.is_active == True
+        )
+
+        result = await self.session.execute(stmt)
+
+        users = result.scalars().all()
+
+        return [
+        self._to_entity(user)
+        for user in users
         ]

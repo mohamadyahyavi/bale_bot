@@ -1,9 +1,10 @@
-from sqlalchemy import select
+from sqlalchemy import select,exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .model import RequestModel
 from .entity import RequestEntity
 from ..users import UserModel
+from .enums import RequestStatus
 
 
 
@@ -171,7 +172,7 @@ class RequestRepository:
     department_id
 ):
 
-     stmt = (
+        stmt = (
         select(RequestModel)
         .join(
             UserModel,
@@ -183,11 +184,19 @@ class RequestRepository:
     )
 
 
-     result = await self.session.execute(stmt)
-     requests = result.scalars().all()
-     return [
+        result = await self.session.execute(stmt)
+        requests = result.scalars().all()
+        return [
         self._to_entity(r)
         for r in requests
-    ]
+        ]
 
-    
+    async def get_managers_with_pending_requests(self, manager_id):
+
+          stmt = select(RequestModel.manager_id).where(
+            RequestModel.status == RequestStatus.PENDING
+            ).distinct()
+
+          result = await self.session.execute(stmt)
+
+          return result.scalars().all()
