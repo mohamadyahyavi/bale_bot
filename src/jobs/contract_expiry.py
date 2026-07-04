@@ -9,40 +9,44 @@ class ContractExpiryJob:
 
     def __init__(
         self,
-        user_repo: UserRepository,
+        session_factory,
         notification_service: NotificationService
     ):
 
-        self.users = user_repo
+        self.session_factory = session_factory
         self.notification = notification_service
 
 
 
     async def run(self):
 
-        today = date.today()
 
-        target_date = today + timedelta(days=5)
+      print("🔥 CONTRACT EXPIRY RUNNING")
+      async with self.session_factory() as db:
+
+            users = UserRepository(db)
+
+            today = date.today()
+
+            target_date = today + timedelta(days=5)
 
 
-        employees = await self.users.get_users_with_contract_expiry(
+            employees = await users.get_users_with_contract_expiry(today,
             target_date
         )
 
-        if not employees:
-            return
+            if not employees:
+               return
 
-        hr = await self.users.get_hr_user(
-            "HR"
-        )
+            hr = await users.get_hr_user()
 
-        message = (
+            message = (
                 "⚠️ هشدار پایان قرارداد\n\n"
                 "قرارداد افراد زیر ۵ روز دیگر به پایان می‌رسد:\n\n"
             )
 
 
-        for user in employees:
+            for user in employees:
 
                 message += (
                     f"👤 {user.first_name} {user.last_name}\n"
@@ -50,7 +54,7 @@ class ContractExpiryJob:
                 )
 
 
-        await self.notification.send_custom(
+            await self.notification.send_custom(
                 hr.bale_user_id,
                 message
             )

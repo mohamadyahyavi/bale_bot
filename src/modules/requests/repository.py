@@ -4,13 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .model import RequestModel
 from .entity import RequestEntity
 from ..users import UserModel
-from .enums import RequestStatus
-
-
-
+from .enums import RequestStatus,RequestType
+from datetime import datetime,timedelta
 
 class RequestRepository:
-
 
     def __init__(
         self,
@@ -18,8 +15,6 @@ class RequestRepository:
     ):
 
         self.session = session
-
-
 
     def _to_entity(
         self,
@@ -34,17 +29,17 @@ class RequestRepository:
 
             manager_id=model.manager_id,
 
-            type=model.type,
+            type=RequestType(model.type),
 
-            status=model.status,
+            status=RequestStatus(model.status),
 
             data=model.data,
 
             created_at=model.created_at,
 
-            processed_at=model.processed_at
+            processed_at=model.processed_at,
+            reject_reason=model.reject_reason
         )
-
 
 
     async def create(
@@ -59,9 +54,13 @@ class RequestRepository:
 
             manager_id=request.manager_id,
 
-            type=request.type.value,
+            type=request.type.value
+                if hasattr(request.type, "value")
+                else request.type,
 
-            status=request.status.value,
+            status=request.status.value
+                if hasattr(request.status, "value")
+                else request.status,
 
             data=request.data
 
@@ -107,19 +106,23 @@ class RequestRepository:
         return self._to_entity(request)    
 
 
-
-
     async def get_by_manager(
-        self,
-        manager_id
-    ):
+         self,
+         manager_id
+         ):
 
 
-        stmt = select(RequestModel).where(
+        thirty_days_ago = datetime.now() - timedelta(days=30)
 
-            RequestModel.manager_id == manager_id
 
-        )
+        stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.manager_id == manager_id,
+            RequestModel.created_at >= thirty_days_ago
+        ).order_by(RequestModel.created_at.desc())
+        
+    )
 
 
         result = await self.session.execute(stmt)
@@ -129,14 +132,9 @@ class RequestRepository:
 
 
         return [
-
-            self._to_entity(r)
-
-            for r in requests
-
+        self._to_entity(r)
+        for r in requests
         ]
-
-
 
 
     async def get_by_user(
@@ -191,12 +189,82 @@ class RequestRepository:
         for r in requests
         ]
 
-    async def get_managers_with_pending_requests(self, manager_id):
+    async def get_managers_with_pending_requests(self):
 
-          stmt = select(RequestModel.manager_id).where(
+          stmt = (
+          select(UserModel.bale_user_id)
+          .join(
+            RequestModel,
+            RequestModel.manager_id == UserModel.id
+          )
+         .where(
             RequestModel.status == RequestStatus.PENDING
-            ).distinct()
+          )
+         .distinct()
+    )
 
           result = await self.session.execute(stmt)
 
           return result.scalars().all()
+    
+
+    async def update(
+          self,
+          request: RequestEntity
+          ):
+
+        stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.id == request.id
+        )
+        )
+
+        result = await self.session.execute(stmt)
+
+        model = result.scalar_one_or_none()
+
+
+        if not model:
+           raise Exception("Request not found")
+
+
+        model.status = (
+        request.status.value
+        if hasattr(request.status, "value")
+        else request.status
+        )
+
+        model.processed_at = request.processed_at
+        model.reject_reason = request.reject_reason
+
+
+        await self.session.commit()
+
+
+        await self.session.refresh(model)
+
+
+        return self._to_entity(model)
+    
+
+    async def get_all_requests(self):
+
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+
+        stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.created_at >= thirty_days_ago
+        )
+        .order_by(RequestModel.created_at.desc())
+        )
+
+        result = await self.session.execute(stmt)
+
+        requests = result.scalars().all()
+
+        return [
+        self._to_entity(r)
+        for r in requests
+        ]

@@ -1,5 +1,5 @@
 from src.modules.requests.enums import RequestType
-
+from datetime import datetime
 
 class RequestFormEngine:
 
@@ -19,10 +19,10 @@ class RequestFormEngine:
                 "leave_type": "Select leave type (DAILY / HOURLY):",
 
                 "start_datetime": 
-                    "Enter start date/time:",
+                    "Enter start datetime(like 2026-06-30 16:00:00):",
 
                 "end_datetime":
-                    "Enter end date/time:",
+                    "Enter end datetime:",
 
                 "reason":
                     "Write reason:"
@@ -34,7 +34,8 @@ class RequestFormEngine:
 
             "steps": [
                 "date",
-                "reason"
+                "reason",
+                "explanation"
             ],
 
             "questions": {
@@ -43,7 +44,9 @@ class RequestFormEngine:
                     "Enter remote work date:",
 
                 "reason":
-                    "Write reason:"
+                    "Write reason:",
+                "explanation":
+                    "write details:"    
             }
         },
 
@@ -51,14 +54,19 @@ class RequestFormEngine:
         RequestType.OVERTIME.value: {
 
             "steps": [
+
+                "date",
                 "hours",
                 "reason"
             ],
 
             "questions": {
 
+                "date":
+                    "Enter the date(like 2026-07-02)",
+
                 "hours":
-                    "Enter overtime hours:",
+                    "Enter overtime hours(like 3)",
 
                 "reason":
                     "Write reason:"
@@ -198,42 +206,36 @@ class RequestFormEngine:
     # =========================
 
     def validate(
-        self,
-        step: str,
-        value: str
-    ):
+    self,
+    step: str,
+    value: str
+):
 
+       value = value.strip()
 
-        value = value.strip()
+       if not value:
+          return False
 
+       if step == "leave_type":
+          return value.upper() in [
+            "DAILY",
+            "HOURLY"
+        ]
 
-        if not value:
+       if step == "hours":
+          return value.isdigit()
+
+       if step in [
+          "start_datetime",
+          "end_datetime"
+        ]:
+         try:
+            datetime.strptime(
+                value,
+                "%Y-%m-%d %H:%M:%S"
+            )
+            return True
+         except ValueError:
             return False
 
-
-
-        if step == "leave_type":
-
-            return value.upper() in [
-                "DAILY",
-                "HOURLY"
-            ]
-
-
-
-        if step == "hours":
-
-            return value.isdigit()
-
-
-
-        if step in [
-            "start_datetime",
-            "end_datetime"
-        ]:
-
-            return len(value) >= 5
-
-
-
-        return True
+         return True

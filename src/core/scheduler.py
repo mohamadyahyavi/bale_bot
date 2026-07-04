@@ -14,16 +14,31 @@ class SchedulerManager:
     def add_cron_job(
         self,
         func,
-        hour: int,
-        minute: int,
-        name: str
+        hour,
+        minute,
+        name: str,
+        day_of_week: list[str] | None = None,
+        
     ):
 
+        if day_of_week is None:
+            day_of_week = [
+                "sat",
+                "sun",
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+            ]
+        
+        print("ADDING JOB:", name)
         job = self.scheduler.add_job(
             func,
             trigger=CronTrigger(
                 hour=hour,
-                minute=minute
+                minute=minute,
+                day_of_week="sat,sun,mon,tue,wed,thu",
+
             ),
             id=name,
             replace_existing=True,
@@ -38,6 +53,7 @@ class SchedulerManager:
 
         if not self.scheduler.running:
 
+           print("🔥 SCHEDULER STARTED")
            self.scheduler.start()
 
 

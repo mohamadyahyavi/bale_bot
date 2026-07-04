@@ -109,7 +109,7 @@ class UserRepository:
 
         result = await self.session.execute(stmt)
 
-        user = result.scalars().all()
+        user = result.scalar_one_or_none()
 
         return  self._to_entity(user)
     
@@ -148,11 +148,12 @@ class UserRepository:
 
     async def get_users_with_contract_expiry(
     self,
-    target_date: date
+    start_date:date,
+    end_date:date
     ):
 
         stmt = select(UserModel).where(
-        UserModel.contract_end_date == target_date,
+        UserModel.contract_end_date.between(start_date,end_date),
         UserModel.is_active == True
         )
 
@@ -164,3 +165,31 @@ class UserRepository:
         self._to_entity(user)
         for user in users
         ]
+    
+    async def update(
+             self,
+             user: User
+        ):
+
+        stmt = select(UserModel).where(
+            UserModel.id == user.id
+            )
+
+        result = await self.session.execute(stmt)
+
+        model = result.scalar_one_or_none()
+
+
+        if not model:
+               raise Exception("User not found")
+
+
+        model.total_leave_hours = user.total_leave_hours
+
+
+        await self.session.commit()
+
+        await self.session.refresh(model)
+
+
+        return self._to_entity(model)

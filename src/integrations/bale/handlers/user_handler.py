@@ -1,11 +1,13 @@
 from src.core.permissions.permission_service import PermissionService
+from src.core.permissions.access_control import AccessControlService
 from src.modules.users.service import UserService
 from src.integrations.bale.client import BaleClient as bale
+from src.integrations.bale.keyboards import employee_keyboard,hr_keyboard,ceo_keyboard,manager_keyboard
 class UserHandler:
 
-    def __init__(self, user_service:UserService,permission_service:PermissionService, bale_client:bale):
+    def __init__(self, user_service:UserService,access_control_service:AccessControlService, bale_client:bale):
         self.user_service = user_service
-        self.permission_service = permission_service
+        self.access_control_service = access_control_service
         self.bale = bale_client
 
     async def handle_start(self, bale_user_id: str):
@@ -18,11 +20,11 @@ class UserHandler:
                 "User not registered"
             )
         
-        permissions = await self.permission_service.get_permissions(
-            bale_user_id
+        context = await self.access_control_service.get_context(
+            user.id
         )
 
-        menu = self._build_menu(permissions)
+        menu = self._build_menu(context)
 
         return await self.bale.send_message(
             bale_user_id,
@@ -30,39 +32,18 @@ class UserHandler:
             keyboard=menu
         )
 
-    def _build_menu(self, permissions):
+    def _build_menu(self, context):
 
-        menu = []
+        if context["role"] == "CEO":
+            return ceo_keyboard()
+        
 
-
-        if permissions["can_create_request"]:
-            menu.append(["create_request"])
-
-
-        if permissions["can_view_own_requests"]:
-            menu.append(["My Requests"])
+        if context["is_manager"]:
+            return manager_keyboard() 
 
 
-        if permissions["can_view_department_requests"]:
-            menu.append(["Team Requests"])
+        if context["role"] == "HR":
+            return hr_keyboard()     
 
 
-        if permissions["can_view_all_requests"]:
-            menu.append(["All Requests"])
-
-
-        if permissions["can_view_own_reports"]:
-            menu.append(["My Reports"])
-
-
-        if permissions["can_view_team_reports"]:
-            menu.append(["Team Reports"])
-
-
-        if permissions["can_view_all_reports"]:
-            menu.append(["Reports"])
-
-
-        return {"keyboard": menu,
-                "resize_keyboard": True
-                }
+        return employee_keyboard()

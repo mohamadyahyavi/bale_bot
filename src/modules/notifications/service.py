@@ -46,17 +46,31 @@ class NotificationService:
         first_name,
         last_name,
         request_type: RequestType,
-        status: RequestStatus
+        status: RequestStatus,
+        reason: str | None = None
     ):
 
         message = (
-            "📢 وضعیت درخواست شما تغییر کرد\n\n"
+            "📢 وضعیت درخواست تغییر کرد\n\n"
             f"👤 کارمند: {first_name} {last_name}\n"
             f"📄 نوع درخواست: {REQUEST_TYPE_TEXT.get(request_type, request_type.value)}\n"
             f"📊 وضعیت: {STATUS_TEXT.get(status, status.value)}"
+            
         )
 
-        return await self.bale.send_message(user_bale_id, message)
+        if status == RequestStatus.REJECTED and reason:
+           message += (
+            f"\n\n❌ دلیل رد درخواست:\n"
+            f"{reason}"
+            )
+
+
+        return await self.bale.send_message(
+            user_bale_id,
+            message
+        )
+
+        #return await self.bale.send_message(user_bale_id, message)
     
 
     async def notify_missing_hours(self, user_bale_id, missing_hours):
@@ -71,7 +85,7 @@ class NotificationService:
 
     async def notify_open_timer(self, user_bale_id):
 
-        message = "🔴 تایمر شما هنوز بسته نشده است"
+        message = "لظفا تایمر خود را ببندید شما تایمر باز دارید"
 
         await self.bale.send_message(user_bale_id, message)
 
@@ -158,4 +172,67 @@ class NotificationService:
         "لطفاً وارد سیستم شوید و بررسی کنید."
         )
 
-        await self.bale.send_message(manager_bale_id, message)      
+        await self.bale.send_message(manager_bale_id, message) 
+
+    async def notify_leave_limit_reached(
+        self,
+        user_bale_id: str
+    ):
+
+        message = (
+        "⚠️ امکان ثبت درخواست مرخصی وجود ندارد\n\n"
+        "سقف مجاز مرخصی شما پر شده است.\n"
+        )
+
+        await self.bale.send_message(
+        user_bale_id,
+        message
+        )
+
+    async def notify_leave_hours(self,user_bale_id,hours):
+          message = (
+          f"⚠️  ساعات مجاز مزخصی شما {hours} است\n\n"
+          )
+          await self.bale.send_message(user_bale_id,message) 
+
+
+    async def notify_wrong_start_or_end_leave_time(self,user_bale_id):
+
+          message=("به زمان شروع و پایان مرخصی توجه کنید")
+
+          await self.bale.send_message(user_bale_id,message)       
+         
+
+    async def notify_worK_start_reminder(self,user_bale_id):
+
+          message-("شروع ساعت کاری خود را در سامانه ثبت کنید")
+
+          await self.bale.send_message(user_bale_id,message)
+
+
+    async def notify_work_start(self,user_bale_id):
+
+          message=("شروع ساعت کاری خود رو ثبت کنید")
+
+          await self.bale.send_message(user_bale_id,message)
+
+
+    async def notify_work_end(self,user_bale_id):
+
+          message=("تایم کاری رو به اتمام است لطفا تایمر خود را ببندید")  
+
+          await self.bale.send_message(user_bale_id,message) 
+
+    async def notify_hr_start_job(self,user_bale_id,first_name,last_name):
+
+           text = (
+           f"⚠️ {first_name} {last_name} "
+           f"امروز هنوز شروع ساعت کاری خود را ثبت نکرده است."
+
+           )  
+
+           await self.bale.send_message(
+           user_bale_id,
+           text,
+           )
+          

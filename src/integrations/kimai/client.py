@@ -1,66 +1,49 @@
+from typing import Any
+from src.core.config import settings
+
 import httpx
 
 
 class KimaiClient:
-
     def __init__(
         self,
         base_url: str,
-        token: str
+        token: str,
     ):
+        self.base_url = base_url.rstrip("/")
 
-        self.client = httpx.AsyncClient(
-            base_url=base_url,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
-        )
-
-
-    async def get_timesheets(
-        self,
-        user_id: int,
-        start: str,
-        end: str
-    ):
-
-        response = await self.client.get(
-            "/api/timesheets",
-            params={
-                "user": user_id,
-                "begin": start,
-                "end": end
-            }
-        )
-
-
-        response.raise_for_status()
-
-        return response.json()
-
-
-
-    async def get_active_timesheets(
-        self,
-        user_id: int | None = None
-    ):
-
-        params = {
-            "active": 1
+        self.headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
         }
 
+        self.timeout = 20.0
 
-        if user_id:
-            params["user"] = user_id
+    async def get(
+        self,
+        endpoint: str,
+        params: dict | None = None,
+    ) -> Any:
 
+        async with httpx.AsyncClient(
+            base_url=self.base_url,
+            headers=self.headers,
+            timeout=self.timeout,
+        ) as client:
 
-        response = await self.client.get(
-            "/api/timesheets",
-            params=params
-        )
+            response = await client.get(
+                endpoint,
+                params=params,
+            )
 
+            print("URL:", response.request.url)
+            print("STATUS:", response.status_code)
+            print(settings.KIMAI_BASE_URL)
+            print(settings.KIMAI_USERNAME)
+            print(settings.KIMAI_API_TOKEN)
+            if response.status_code != 200:
+                print("BODY:", response.text)
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        return response.json()
+            return response.json()

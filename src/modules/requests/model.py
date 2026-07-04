@@ -65,6 +65,17 @@ class RequestModel(Base):
         nullable=False
     )
 
+    message_id = Column(
+    String,
+    nullable=True
+    )
+
+    reject_reason = Column(
+        String,
+        nullable=True
+    )
+
+
 
     created_at = Column(
         DateTime,

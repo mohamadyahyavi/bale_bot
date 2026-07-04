@@ -48,5 +48,6 @@ class UserModel(Base):
     # relationship (برای اینکه manager و department قابل دسترسی باشد)
     department = relationship(
         "DepartmentModel",
-        back_populates="users"
+        back_populates="users",
+        foreign_keys=[department_id]
     )

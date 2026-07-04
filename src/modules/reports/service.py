@@ -10,11 +10,11 @@ class ReportService:
 
     def __init__(
         self,
-        kimai_service: KimaiService,
+        #kimai_service: KimaiService,
         calculator: ReportCalculator,
         builder: ReportBuilder
     ):
-        self.kimai = kimai_service
+        #self.kimai = kimai_service
         self.calc = calculator
         self.builder = builder
 

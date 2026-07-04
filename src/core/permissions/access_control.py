@@ -27,8 +27,8 @@ class AccessControlService:
 
 
         return {
-            "user": user,
+            "user_id": user.id,
             "role": user.access_level,
-            "department": department,
+            "department": department.name,
             "is_manager": is_manager
         }

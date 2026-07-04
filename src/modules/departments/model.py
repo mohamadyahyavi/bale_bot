@@ -25,18 +25,20 @@ class DepartmentModel(Base):
     manager_user_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id"),
-        nullable=False
+        nullable=True
     )
 
 
     # relationships
     users = relationship(
         "UserModel",
-        back_populates="department"
+        back_populates="department",
+        foreign_keys="UserModel.department_id"
     )
 
     manager = relationship(
         "UserModel",
         foreign_keys=[manager_user_id],
+        remote_side="UserModel.id",
         uselist=False
     )

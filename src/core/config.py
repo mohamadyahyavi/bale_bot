@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     # KIMAI
     # -------------------------
     KIMAI_BASE_URL: str | None = None
-    KIMAI_API_KEY: str | None = None
+    KIMAI_USERNAME:str
+    KIMAI_API_TOKEN: str | None = None
 
     # -------------------------
     # NOTIFICATIONS
@@ -41,6 +42,5 @@ class Settings(BaseSettings):
         env_file=".env",
         extra="ignore"
     )
-
 
 settings = Settings()

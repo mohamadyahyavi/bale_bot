@@ -21,6 +21,10 @@ class UserService:
         return await self.user_repository.get_by_bale_id(
             bale_user_id
         )
+    
+    async def get_by_id(self,user_id):
+
+        return await self.user_repository.get_by_id(user_id)
 
 
 
@@ -74,7 +78,7 @@ class UserService:
 
     async def get_hr_user(self):
 
-        return await self.user_repository.get_hr_users()
+        return await self.user_repository.get_hr_user()
 
 
 

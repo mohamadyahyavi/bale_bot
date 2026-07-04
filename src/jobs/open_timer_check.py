@@ -1,27 +1,35 @@
 from src.modules.users.repository import UserRepository
-from src.modules.reports.service import ReportService
+from src.integrations.kimai.service import KimaiService
 from src.modules.notifications.service import NotificationService
 
 
 class OpenTimerCheckJob:
 
-    def __init__(self, user_repo, report_service, notification_service):
+    def __init__(self, session_factory, kimai_service, notification_service):
 
-        self.users = user_repo
-        self.report = report_service
+        self.session_factory=session_factory
+        self.kimai = kimai_service
         self.notification = notification_service
 
 
     async def run(self):
 
-        users = await self.users.get_active_users()
+          async with self.session_factory() as db:
 
-        for user in users:
+            user_repo = UserRepository(db)
+            #hr_user= await user_repo.get_hr_user()
+            active_users = await user_repo.get_active_users()
 
-            has_open = await self.report.has_open_timer(user)
+            for user in active_users:
 
-            if has_open:
+                if user.kimai_user_id is None:
+                    continue
 
-                await self.notification.notify_open_timer(
-                    user.bale_user_id
+                open_timesheets = await self.kimai.get_open_timesheets(
+                    user.kimai_user_id
                 )
+
+                if open_timesheets:
+                    await self.notification.notify_open_timer(
+                        user.bale_user_id
+                    )

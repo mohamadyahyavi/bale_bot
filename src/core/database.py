@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.core.config import settings
-
+import src.db.models
 
 # -------------------------
 # ENGINE

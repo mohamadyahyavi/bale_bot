@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from datetime import datetime
+from src.modules.requests.enums import RequestType, RequestStatus
+
 
 
 
@@ -14,11 +16,15 @@ class RequestEntity:
 
     manager_id: UUID
 
-    type: str
+    type: RequestType
 
-    status: str
+    status:RequestStatus 
 
     data: dict
+
+    message_id: str | None = None
+
+    reject_reason: str | None = None
 
     id: UUID | None = None
 

@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.integrations.bale.client import BaleClient
 
@@ -11,33 +11,53 @@ from src.modules.notifications.service import NotificationService
 
 from src.modules.reports.service import ReportService
 from src.modules.reports.calculator import ReportCalculator
+from src.modules.reports.builder import ReportBuilder
 
 from src.jobs.work_start_reminder import WorkStartReminderJob
 from src.jobs.missing_hours import MissingHoursJob
 from src.jobs.open_timer_check import OpenTimerCheckJob
-from src.jobs.pending_request import PendingRequestsJob
+from src.jobs.pending_requests import PendingRequestsJob
+from src.jobs.start_work import WorkStartNotificationJob
+from src.jobs.finish_work import WorkEndNotificationJob
 from .setup import setup_scheduler
 from src.core.scheduler import SchedulerManager
+from src.core.config import settings
 
 def build_scheduler_jobs(
     http_client,
-    db: AsyncSession
+    session_factory: async_sessionmaker
 ):
+    print("BUILD SCHEDULER CALLED")
     # =========================
     # CLIENTS
     # =========================
-    bale_client = BaleClient(
-        http_client
-    )
+    bale_client = BaleClient(http_client)
+    kimai_client = KimaiClient(
+    base_url=settings.KIMAI_BASE_URL,
+    token=settings.KIMAI_API_TOKEN,
+)
 
-    kimai_client = KimaiClient()
+    #kimai_client = KimaiClient()
 
     # =========================
     # REPOSITORIES
     # =========================
 
-    user_repository = UserRepository(db)
-    request_repository = RequestRepository(db)
+    #user_repository = UserRepository(db)
+    #request_repository = RequestRepository(db)
+    async def get_user_repository():
+
+        async with session_factory() as db:
+
+            return UserRepository(db)
+
+
+
+    async def get_request_repository():
+
+        async with session_factory() as db:
+
+            return RequestRepository(db)
     # =========================
     # SERVICES
     # =========================
@@ -48,46 +68,51 @@ def build_scheduler_jobs(
 
 
     kimai_service = KimaiService(
-        kimai_client
+       kimai_client
     )
 
 
     report_service = ReportService(
-        kimai_service,
-        ReportCalculator()
+       # kimai_service,
+        ReportCalculator(),
+        ReportBuilder()
     )
 
     # =========================
     # JOBS
     # =========================
     work_start_job = WorkStartReminderJob(
-        user_repository,
-        report_service,
+        session_factory,
+        kimai_service,
         notification_service
     )
 
 
     missing_hours_job = MissingHoursJob(
-        user_repository,
+        session_factory,
         report_service,
         notification_service
     )
 
 
     open_timer_job = OpenTimerCheckJob(
-        user_repository,
-        report_service,
+        session_factory,
+        kimai_service,
         notification_service
     )
 
+
     contract_expiry_job = ContractExpiryJob(
-    user_repository,
+    session_factory,
     notification_service
-)
+    )
+    
+    start_work_job=WorkStartNotificationJob(session_factory,notification_service)
+    finish_work_job=WorkEndNotificationJob(session_factory,notification_service)
+      
 
     pending_requests_job = PendingRequestsJob(   # 👈 ADD
-        request_repository,
-        user_repository,
+        session_factory,
         notification_service
     )
 
@@ -100,9 +125,12 @@ def build_scheduler_jobs(
         missing_hours_job,
         open_timer_job,
         contract_expiry_job,
-        pending_requests_job
+        pending_requests_job,
+        start_work_job,
+        finish_work_job
     )
 
+    print("STARTING SCHEDULER")
     scheduler.start()
 
     return scheduler

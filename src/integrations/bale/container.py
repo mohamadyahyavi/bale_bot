@@ -16,6 +16,9 @@ from src.modules.notifications.service import NotificationService
 from src.core.permissions.access_control import AccessControlService
 from src.core.permissions.permission_service import PermissionService
 from src.core.config import settings
+from src.modules.reports.service import ReportService
+from src.modules.reports.builder import ReportBuilder
+from src.modules.reports.calculator import ReportCalculator
 
 
 # =========================
@@ -26,7 +29,8 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     # -------------------------
     # CLIENTS
     # -------------------------
-    bale_client = BaleClient(http_client,BALE_BOT_TOKEN)
+    bale_client = BaleClient(http_client)#settings.BALE_BOT_TOKEN)
+    
 
     # -------------------------
     # REPOSITORIES
@@ -40,7 +44,8 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     # -------------------------
     notification_service = NotificationService(bale_client)
     user_service = UserService(user_repository)
-    request_service = RequestService(request_repository, user_repository,notification_service)
+    request_service = RequestService(request_repository, user_repository, department_repository,notification_service)
+    report_service=ReportService(ReportCalculator(),ReportBuilder())
     
     access_control_service = AccessControlService(
         user_repository,
@@ -54,16 +59,17 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     # -------------------------
     user_handler = UserHandler(
         user_service=user_service,
-        permission_service=permission_service,
+        access_control_service=access_control_service,
         bale_client=bale_client
     )
 
     request_handler = RequestHandler(
         request_service=request_service,
+        user_repository=user_repository,
         bale_client=bale_client
     )
 
-    report_handler = ReportHandler()
+    report_handler = ReportHandler(user_service,report_service,bale_client)
 
     # -------------------------
     # ROUTER (ENTRYPOINT)
@@ -71,7 +77,8 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     return MessageRouter(
         user_handler=user_handler,
         request_handler=request_handler,
-        permission_service=permission_service,
+        access_control_service=access_control_service,
         user_service=user_service,
-        report_handler=report_handler
+        report_handler=report_handler,
+        bale_client=bale_client
     )
