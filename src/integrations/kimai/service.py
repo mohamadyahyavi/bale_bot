@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time,timedelta
 from collections import defaultdict
 from .client import KimaiClient
 
@@ -18,6 +18,54 @@ class KimaiService:
         )
 
         return begin, now
+    
+    async def get_current_week_timesheets(
+      self,
+      kimai_user_id: int,
+    ):
+
+      now = datetime.now()
+
+      days_since_saturday = (now.weekday() + 2) % 7
+      week_start = now - timedelta(days=days_since_saturday)
+
+      begin = datetime.combine(week_start.date(), time.min)
+      end = now
+
+      return await self.client.get(
+        "/api/timesheets",
+        params={
+            "user": kimai_user_id,
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+      )
+    
+
+    async def get_current_month_timesheets(
+      self,
+      kimai_user_id: int,
+      ):
+
+      now = datetime.now()
+
+      begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+      )
+
+      return await self.client.get(
+        "/api/timesheets",
+        params={
+            "user": kimai_user_id,
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+      )
 
     async def get_today_timesheets(
         self,
@@ -35,6 +83,163 @@ class KimaiService:
                 "end": end.strftime("%Y-%m-%dT%H:%M:%S"),
             },
         )
+    
+    async def get_week_worked_duration(
+      self,
+      kimai_user_id: int,
+      ) -> str:
+
+      entries = await self.get_current_week_timesheets(
+        kimai_user_id
+      )
+
+      total_seconds = sum(
+        entry.get("duration", 0)
+        for entry in entries
+      )
+
+      total_minutes = total_seconds // 60
+   
+      hours = total_minutes // 60
+      minutes = total_minutes % 60
+
+      return f"{hours}:{minutes:02d}"
+    
+
+    async def get_month_worked_duration(
+      self,
+      kimai_user_id: int,
+    ) -> str:
+
+      entries = await self.get_current_month_timesheets(
+        kimai_user_id
+      )
+
+      total_seconds = sum(
+        entry.get("duration", 0)
+        for entry in entries
+      )
+
+      total_minutes = total_seconds // 60
+
+      hours = total_minutes // 60
+      minutes = total_minutes % 60
+
+      return f"{hours}:{minutes:02d}"
+
+    async def get_week_activity_durations(
+       self,
+       kimai_user_id: int,
+    ):
+
+       entries = await self.get_current_week_timesheets(
+        kimai_user_id
+       )
+
+       activities = await self.get_all_activities()
+
+       activity_names = {
+        activity["id"]: activity["name"]
+        for activity in activities
+       }
+
+       activity_seconds = defaultdict(int)
+
+       for entry in entries:
+
+          activity_id = entry.get("activity")
+
+          if activity_id is None:
+            continue
+
+          activity_seconds[activity_id] += entry.get("duration", 0)
+
+       result = []
+
+       for activity_id, seconds in activity_seconds.items():
+ 
+          total_minutes = seconds // 60
+          hours = total_minutes // 60
+          minutes = total_minutes % 60
+
+          result.append({
+            "activity": activity_names.get(
+                activity_id,
+                f"Activity {activity_id}"
+            ),
+            "duration": f"{hours}:{minutes:02d}"
+          })
+
+       return result
+    
+    async def get_month_activity_duration(self, kimai_user_id: int):
+
+        entries = await self.get_current_month_timesheets(kimai_user_id)
+        activities = await self.get_all_activities()
+
+        activity_names = {
+        activity["id"]: activity["name"]
+        for activity in activities
+        }
+
+        activity_seconds = defaultdict(int)
+
+        for entry in entries:
+            activity_seconds[entry["activity"]] += entry.get("duration", 0)
+
+        result = []
+
+        for activity_id, seconds in activity_seconds.items():
+
+            total_minutes = seconds // 60
+            hours = total_minutes // 60
+            minutes = total_minutes % 60
+
+            result.append({
+            "activity": activity_names.get(activity_id, str(activity_id)),
+            "duration": f"{hours}:{minutes:02d}"
+            })
+
+        return result
+
+    async def get_all_activities(self):
+
+        return await self.client.get(
+        "/api/activities"
+        )    
+    
+    async def get_today_activity_durations(self, kimai_user_id: int):
+
+        entries = await self.get_today_timesheets(kimai_user_id)
+        activities = await self.get_all_activities()
+
+        activity_names = {
+        activity["id"]: activity["name"]
+        for activity in activities
+        }
+
+        activity_seconds = defaultdict(int)
+
+        for entry in entries:
+            activity_seconds[entry["activity"]] += entry.get("duration", 0)
+
+        result = []
+
+        for activity_id, seconds in activity_seconds.items():
+
+            total_minutes = seconds // 60
+            hours = total_minutes // 60
+            minutes = total_minutes % 60
+
+            result.append({
+            "activity": activity_names.get(
+                activity_id,
+                f"Activity {activity_id}"
+            ),
+            "duration": f"{hours}:{minutes:02d}"
+            })
+
+        return result
 
     async def get_month_delay_hours(self,kimai_user_id):
 

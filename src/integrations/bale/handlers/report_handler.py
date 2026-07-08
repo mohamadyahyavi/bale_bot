@@ -107,19 +107,125 @@ class ReportHandler:
             member.kimai_user_id
             )
 
-            overtime = await self.kimai_service.get_today_overtime(
+            overtime = await self.request_repository.get_today_overtime_by_user_id(
+            member.id
+            )
+            activities = await self.kimai_service.get_today_activity_durations(
             member.kimai_user_id
             )
             message += (
             f"⏱ کارکرد امروز: {worked_hours}\n"
             f"➕ اضافه‌کاری امروز: {overtime}\n\n"
-
+            f"📋 فعالیت‌ها:\n"
             )
+            if activities:
+              for activity in activities:
+                message += (
+                    f"{activity['activity']} : {activity['duration']}\n"
+                )
+            else:
+              message += " • فعالیتی ثبت نشده است.\n"
+
+            message += "\n"
 
         await self.bale.send_message(
             manager.bale_user_id,
             message
         )
+
+    async def show_team_weekly_report(self, user_id: str):
+
+       manager = await self.user_repository.get_by_id(user_id)
+
+       department = await self.department_repository.get_by_manager_id(user_id)
+       department_active_users = await self.user_repository.get_by_department_id(
+        department.id
+       )
+
+       message = "👥 گزارش هفتگی تیم\n\n"
+
+       for member in department_active_users:
+
+            worked_hours = await self.kimai_service.get_week_worked_duration(
+            member.kimai_user_id
+            )
+
+            overtime = await self.request_repository.get_week_overtime_by_user_id(
+            member.id
+           )
+
+            activities = await self.kimai_service.get_week_activity_durations(
+            member.kimai_user_id
+            )
+
+            message += (
+            f"👤 {member.first_name} {member.last_name}\n"
+            f"⏱ کارکرد هفته: {worked_hours}\n"
+            f"➕ اضافه‌کاری هفته: {overtime}\n"
+            f"📋 فعالیت‌ها:\n"
+        )
+
+            if activities:
+               for activity in activities:
+                 message += (
+                    f" {activity['activity']} : {activity['duration']}\n"
+                 )
+            else:
+               message += "• فعالیتی ثبت نشده است.\n"
+
+            message += "\n"
+
+       await self.bale.send_message(
+        manager.bale_user_id,
+        message
+        )
+
+    async def show_team_monthly_report(self, user_id: str):
+
+       manager = await self.user_repository.get_by_id(user_id)
+
+       department = await self.department_repository.get_by_manager_id(user_id)
+       department_active_users = await self.user_repository.get_by_department_id(
+        department.id
+       )
+
+       message = "👥 گزارش ماهانه تیم\n\n"
+
+       for member in department_active_users:
+
+          worked_hours = await self.kimai_service.get_month_worked_duration(
+            member.kimai_user_id
+          )
+
+          overtime = await self.request_repository.get_month_overtime_by_user_id(
+            member.id
+          )
+
+          activities = await self.kimai_service.get_month_activity_duration(
+            member.kimai_user_id
+          )
+
+          message += (
+            f"👤 {member.first_name} {member.last_name}\n"
+            f"⏱ کارکرد ماه: {worked_hours}\n"
+            f"➕ اضافه‌کاری ماه: {overtime}\n"
+            f"📋 فعالیت‌ها:\n"
+          )
+
+          if activities:
+            for activity in activities:
+                message += (
+                    f" {activity['activity']} : {activity['duration']}\n"
+                )
+          else:
+            message += "• فعالیتی ثبت نشده است.\n"
+
+          message += "\n"
+
+       await self.bale.send_message(
+        manager.bale_user_id,
+        message
+       )       
 
     
     # =========================

@@ -5,7 +5,7 @@ from .model import RequestModel
 from .entity import RequestEntity
 from ..users import UserModel
 from .enums import RequestStatus,RequestType
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,time
 
 class RequestRepository:
 
@@ -299,3 +299,131 @@ class RequestRepository:
         self._to_entity(r)
         for r in requests
         ]
+    
+    async def get_today_overtime_by_user_id(self,user_id):
+
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=now.day,
+        hour=0,
+        minute=0,
+        second=0,
+        )
+
+        stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.created_at >= begin,
+            RequestModel.type == RequestType.OVERTIME,
+            RequestModel.status == RequestStatus.ACCEPTED,
+            RequestModel.user_id == user_id,
+            )
+        )
+
+        result = await self.session.execute(stmt)
+
+        requests = result.scalars().all()
+
+        total_hours = 0.0
+
+        for request in requests:
+            data = request.data or {}
+            total_hours += float(data.get("hours", 0))
+
+        total_minutes = int(total_hours * 60)
+
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+
+        return f"{hours}:{minutes:02d}"
+    
+    async def get_week_overtime_by_user_id(
+      self,
+      user_id,
+    ) -> str:
+
+      now = datetime.now()
+
+      days_since_saturday = (now.weekday() + 2) % 7
+
+      week_start = now - timedelta(days=days_since_saturday)
+
+      begin = datetime(
+        year=week_start.year,
+        month=week_start.month,
+        day=week_start.day,
+        hour=0,
+        minute=0,
+        second=0,
+      )
+
+      stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.user_id == user_id,
+            RequestModel.type == RequestType.OVERTIME,
+            RequestModel.status == RequestStatus.ACCEPTED,
+            RequestModel.created_at >= begin,
+           )
+        )
+
+      result = await self.session.execute(stmt)
+
+      requests = result.scalars().all()
+
+      total_hours = 0
+
+      for request in requests:
+
+        data = request.data or {}
+
+        total_hours += int(data.get("hours", 0))
+
+      hours = total_hours
+      minutes = 0
+
+      return f"{hours}:{minutes:02d}"
+    
+
+    async def get_month_overtime_by_user_id(
+    self,
+    user_id,
+    ) -> str:
+
+       now = datetime.now()
+
+       begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+       )
+
+       stmt = (
+        select(RequestModel)
+        .where(
+            RequestModel.user_id == user_id,
+            RequestModel.type == RequestType.OVERTIME,
+            RequestModel.status == RequestStatus.ACCEPTED,
+            RequestModel.created_at >= begin,
+          )
+       )
+
+       result = await self.session.execute(stmt)
+
+       requests = result.scalars().all()
+
+       total_hours = 0
+
+       for request in requests:
+
+         data = request.data or {}
+
+         total_hours += int(data.get("hours", 0))
+
+       return f"{total_hours}:00"
