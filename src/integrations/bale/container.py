@@ -19,6 +19,8 @@ from src.core.config import settings
 from src.modules.reports.service import ReportService
 from src.modules.reports.builder import ReportBuilder
 from src.modules.reports.calculator import ReportCalculator
+from src.integrations.kimai.client import KimaiClient
+from src.integrations.kimai.service import KimaiService
 
 
 # =========================
@@ -39,10 +41,16 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     request_repository = RequestRepository(db)
     department_repository = DepartmentRepository(db)
 
+    kimai_client = KimaiClient(
+    base_url=settings.KIMAI_BASE_URL,
+    token=settings.KIMAI_API_TOKEN,
+    )
+
     # -------------------------
     # SERVICES
     # -------------------------
     notification_service = NotificationService(bale_client)
+    kimai_service = KimaiService(kimai_client)
     user_service = UserService(user_repository)
     request_service = RequestService(request_repository, user_repository, department_repository,notification_service)
     report_service=ReportService(ReportCalculator(),ReportBuilder())
@@ -69,7 +77,7 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
         bale_client=bale_client
     )
 
-    report_handler = ReportHandler(user_service,report_service,bale_client)
+    report_handler = ReportHandler(user_repository,department_repository,kimai_service,request_repository,bale_client)
 
     # -------------------------
     # ROUTER (ENTRYPOINT)

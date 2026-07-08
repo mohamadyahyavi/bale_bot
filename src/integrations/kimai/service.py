@@ -1,5 +1,5 @@
 from datetime import datetime, time
-
+from collections import defaultdict
 from .client import KimaiClient
 
 
@@ -36,6 +36,71 @@ class KimaiService:
             },
         )
 
+    async def get_month_delay_hours(self,kimai_user_id):
+
+          entries = await self.get_current_month_timesheets(kimai_user_id)
+
+          # گروه‌بندی بر اساس تاریخ
+          daily_entries = defaultdict(list)
+
+          for entry in entries:
+
+            begin = datetime.fromisoformat(
+            entry["begin"].replace("+0330", "+03:30")
+            )
+
+            daily_entries[begin.date()].append(begin)
+
+          total_delay_seconds = 0
+
+          for work_date, begins in daily_entries.items():
+
+            first_begin = min(begins)
+
+            official_start = datetime.combine(
+            work_date,
+            time(hour=9, minute=0),
+            tzinfo=first_begin.tzinfo,
+            )
+
+            if first_begin > official_start:
+
+               total_delay_seconds += (
+                first_begin - official_start
+               ).total_seconds()
+          total_minutes = int(total_delay_seconds // 60)
+          hours = total_minutes // 60
+          minutes = total_minutes % 60     
+
+          return f"{hours}:{minutes:02d}"  
+    
+    async def get_current_month_timesheets(
+       self,
+       kimai_user_id: int,
+       ):
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        )
+
+        end = now
+
+
+        return await self.client.get(
+        "/api/timesheets",
+        params={
+            "user": kimai_user_id,
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": end.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+    )    
+
     async def has_work_started_today(
         self,
         kimai_user_id: int,
@@ -45,21 +110,89 @@ class KimaiService:
             kimai_user_id
         )
 
-        return len(entries) > 0
+        return bool(entries)
 
-    async def get_worked_duration(
+    def _month_range(self):
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1
+        )
+
+        return begin, now    
+
+    async def get_month_worked_duration(
         self,
-        user_id: int,
-    ) -> int:
+        kimai_user_id: int,
+    ) -> float:
 
-        entries = await self.get_today_timesheets(
-            user_id
-        )
+        now = datetime.now()
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+    )
 
-        return sum(
-            entry.get("duration", 0)
-            for entry in entries
-        )
+
+        entries = await self.client.get(
+        "/api/timesheets",
+        params={
+            "user": kimai_user_id,
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+    )
+
+        total_seconds = sum(entry.get("duration", 0) for entry in entries)
+
+        return round(total_seconds / 3600, 2)
+    
+
+    async def get_today_worked_duration(
+       self,
+       kimai_user_id: int,
+       ) -> str:
+
+       entries = await self.get_today_timesheets(kimai_user_id)
+
+       total_seconds = sum(
+        entry.get("duration", 0)
+        for entry in entries
+       )
+
+       total_minutes = total_seconds // 60
+
+       hours = total_minutes // 60
+       minutes = total_minutes % 60
+
+       return f"{hours}:{minutes:02d}"
+    
+    async def get_today_overtime(
+       self,
+       kimai_user_id: int,
+       ) -> str:
+
+       entries = await self.get_today_timesheets(kimai_user_id)
+
+       total_seconds = sum(
+        entry.get("duration", 0)
+        for entry in entries
+       )
+
+       overtime_seconds = max(0, total_seconds - (7 * 3600))
+
+       total_minutes = overtime_seconds // 60
+
+       hours = total_minutes // 60
+       minutes = total_minutes % 60
+
+       return f"{hours}:{minutes:02d}"
+    
 
     async def has_active_timer(
         self,

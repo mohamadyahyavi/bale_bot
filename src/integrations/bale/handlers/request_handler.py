@@ -176,9 +176,9 @@ class RequestHandler:
         requests = await self.request_service.get_department_requests(manager_id)
         return await self._format_list(manager_id, requests)
 
-    async def show_all_requests(self, user_id: str):
+    async def show_all_leave_requests(self, user_id: str):
 
-        requests = await self.request_service.get_all_requests()
+        requests = await self.request_service.get_all_leave_requests()
         return await self._format_list2(user_id, requests)
     
     async def remained_leave_hours(self,user_id):

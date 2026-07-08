@@ -1,69 +1,127 @@
 from datetime import date, timedelta
 
-from src.modules.users.service import UserService
-from src.modules.reports.service import ReportService
+from src.modules.users.service import UserRepository
+from src.modules.departments.repository import DepartmentRepository
 from src.integrations.bale.client import BaleClient
+from src.modules.requests.repository import RequestRepository
+from src.integrations.kimai.service import KimaiService
 
 
 class ReportHandler:
 
     def __init__(
         self,
-        user_service: UserService,
-        report_service: ReportService,
+        user_repository: UserRepository,
+        department_repository:DepartmentRepository,
+        kimai_service:KimaiService,
+        request_repository:RequestRepository,
         bale_client: BaleClient
     ):
-        self.user_service = user_service
-        self.report_service = report_service
+        self.user_repository = user_repository
+        self.department_repository=department_repository
+        self.kimai_service = kimai_service
+        self.request_repository = request_repository
         self.bale = bale_client
 
     # =========================
     # MY REPORTS
     # =========================
-    async def show_my_reports(self, user_id: str):
+    async def show_hr_reports(self, user_id: str):
 
-        user = await self.user_service.get_by_id(user_id)
-
+        user = await self.user_repository.get_by_id(user_id)
+        active_users = await self.user_repository.get_active_users()
+        requests = await self.request_repository.get_month_approved_leaves()
         today = date.today()
+        message = "📊 گزارش منابع انسانی\n\n"
 
-        report = await self.report_service.daily(user, today)
+        if requests:
+           for req in requests:
+               actor= await self.user_repository.get_by_id(req.user_id)
+               body = req.data
 
-        message = (
-            "📊 گزارش روزانه شما\n\n"
-            f"⏱ ساعات کارکرد: {report.worked_hours}\n"
-            f"⚠️ کسری: {report.missing_hours}\n"
-            f"➕ اضافه‌کاری: {report.overtime_hours}"
-        )
+               start = body.get("start_datetime")
+               end = body.get("end_datetime")
+               message += (
+               f"\n درخواست مرخصی"           
+               f"\n👤 {actor.first_name} {actor.last_name}"
+               f"\n📅 شروع: {start}"
+               f"\n📅 پایان: {end}\n"
+               )
 
-        await self.bale.send_message(user.bale_user_id, message)
+
+           await self.bale.send_message(user.bale_user_id, message)
+           message="" 
+           not_started_users = []   
+           for active_user in active_users:
+               
+               has_started = await self.kimai_service.has_work_started_today(active_user.kimai_user_id)
+               monthly_worked_hours = await self.kimai_service.get_month_worked_duration(active_user.kimai_user_id)
+               monthly_delay_hours = await self.kimai_service.get_month_delay_hours(active_user.kimai_user_id)
+               if not has_started:
+                  not_started_users.append(active_user)
+
+               message += (
+               f"\n کارکرد ماه جاری"           
+               f"\n👤 کارمند: {active_user.first_name} {active_user.last_name}"
+               f"\n  ساعت: {monthly_worked_hours}"
+               f"\n⏰ مجموع تأخیر ماه: {monthly_delay_hours} ساعت\n" 
+               )
+           await self.bale.send_message(user.bale_user_id,message)
+           message=""
+           if not_started_users:
+              message += "❌ کارکنانی که امروز هنوز ساعت کاری ثبت نکرده‌اند:\n\n"
+              for user in not_started_users:
+
+                  message += (
+                  f"👤 {user.first_name} {user.last_name}\n"
+                  )
+              await self.bale.send_message(
+              hr.bale_user_id,
+              message
+              )
+
+              
 
     # =========================
     # TEAM REPORTS (DAILY)
     # =========================
-    async def show_team_reports(self, user_id: str):
+    async def show_team_daily_report(self, user_id: str):
 
-        users = await self.user_service.get_team_members(user_id)
+        manager = await self.user_repository.get_by_id(user_id)
+
+        department = await self.department_repository.get_by_manager_id(user_id)
+        department_active_users = await self.user_repository.get_by_department_id(department.id)
 
         today = date.today()
 
         message = "👥 گزارش تیم (روزانه)\n\n"
 
-        for user in users:
+        for member in department_active_users:
 
-            report = await self.report_service.daily(user, today)
+            worked = await self.kimai_service.has_work_started_today(member.kimai_user_id)
+            message += f"👤 {member.first_name} {member.last_name}\n"
+            if not worked:
+               message += "📌 وضعیت: ❌ هنوز ساعت ثبت نکرده\n\n"
+               continue
+            worked_hours = await self.kimai_service.get_today_worked_duration(
+            member.kimai_user_id
+            )
 
+            overtime = await self.kimai_service.get_today_overtime(
+            member.kimai_user_id
+            )
             message += (
-                f"👤 {user.first_name} {user.last_name}\n"
-                f"⏱ {report.worked_hours}h | "
-                f"⚠️ {report.missing_hours}h | "
-                f"➕ {report.overtime_hours}h\n\n"
+            f"⏱ کارکرد امروز: {worked_hours}\n"
+            f"➕ اضافه‌کاری امروز: {overtime}\n\n"
+
             )
 
         await self.bale.send_message(
-            chat_id=user_service.get_by_id(user_id).bale_user_id,
-            text=message
+            manager.bale_user_id,
+            message
         )
 
+    
     # =========================
     # ALL REPORTS (ADMIN)
     # =========================

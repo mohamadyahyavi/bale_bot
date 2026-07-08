@@ -30,6 +30,29 @@ def request_action_keyboard(request_id):
         ]
     }
 
+
+def my_reports_keyboard():
+
+    keyboard = MenuKeyboardMarkup()
+
+    keyboard.add(
+        MenuKeyboardButton("گزارش روزانه")
+    )
+
+    keyboard.add(
+        MenuKeyboardButton("گزارش هفتگی")
+    )
+
+    keyboard.add(
+        MenuKeyboardButton("گزارش ماهانه")
+    )
+
+    keyboard.add(
+        MenuKeyboardButton("🔙 بازگشت")
+    )
+
+    return keyboard
+
 def employee_keyboard():
 
     keyboard = MenuKeyboardMarkup()
@@ -77,10 +100,6 @@ def manager_keyboard():
     )
 
     keyboard.add(
-        MenuKeyboardButton("گزارش های من")
-    )
-
-    keyboard.add(
         MenuKeyboardButton("درخواست های تیم")
     )
 
@@ -120,7 +139,7 @@ def hr_keyboard():
 
 
     keyboard.add(
-        MenuKeyboardButton("همه درخواست ها")
+        MenuKeyboardButton("همه درخواست های مرخصی")
     )
 
     keyboard.add(

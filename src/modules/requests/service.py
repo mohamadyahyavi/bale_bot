@@ -208,7 +208,8 @@ class RequestService:
 
               if current_leave + hours > 182:
 
-                 return await self.notification_service.notify_leave_limit_reached(user.bale_user_id)     
+                 return await self.notification_service.notify_leave_limit_reached(user.bale_user_id)
+                 raise Exception("Leave limit exceeded")     
 
               user.total_leave_hours = (
                  current_leave + hours
@@ -247,6 +248,7 @@ class RequestService:
         return updated_request
 
 
+
     async def reject_request(
         self,
         request_id: UUID,
@@ -258,7 +260,7 @@ class RequestService:
         )
 
 
-        if request.status != RequestStatus.PENDING.value:
+        if request.status != RequestStatus.PENDING:
             raise Exception("Invalid state")
 
         request.status = RequestStatus.REJECTED
@@ -314,7 +316,36 @@ class RequestService:
           return await self.notification_service.notify_leave_hours(user.bale_user_id,hours)
     
 
-    async def get_all_requests(self):
+    async def get_all_leave_requests(self):
 
-          return await self.request_repository.get_all_requests()  
+          return await self.request_repository.get_all_leave_requests()
+
+
+    async def get_month_approved_leaves_total(self) -> float:
+
+        leaves = await self.request_repository.get_month_approved_leaves()
+
+        total_hours = 0
+
+        for leave in leaves:
+            data = leave.data or {}
+
+            start = data.get("start_datetime")
+            end = data.get("end_datetime")
+            leave_type = data.get("leave_type")
+
+            if not start or not end:
+               continue
+
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end)
+
+            if leave_type == "DAILY":
+               duration_hours = (end_dt - start_dt).total_seconds() / 3600
+               total_hours += (duration_hours / 24) * 7
+
+            elif leave_type == "HOURLY":
+                total_hours += (end_dt - start_dt).total_seconds() / 3600
+
+            return round(total_hours, 2)  
 

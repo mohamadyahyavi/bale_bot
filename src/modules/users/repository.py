@@ -62,9 +62,6 @@ class UserRepository:
 
         return self._to_entity(user)
 
-
-
-
     async def get_by_id(self, user_id: UUID):
 
         stmt = select(UserModel).where(
@@ -86,7 +83,8 @@ class UserRepository:
     async def get_by_department_id(self, department_id: UUID):
 
         stmt = select(UserModel).where(
-            UserModel.department_id == department_id
+            UserModel.department_id == department_id,
+            UserModel.is_active == True
         )
 
         result = await self.session.execute(stmt)

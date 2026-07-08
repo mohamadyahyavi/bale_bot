@@ -11,8 +11,6 @@ class UserService:
     ):
         self.user_repository = user_repository
 
-
-
     async def get_by_bale_id(
         self,
         bale_user_id: str

@@ -7,6 +7,7 @@ from .report_handler import ReportHandler
 from src.integrations.bale.client import BaleClient 
 from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
+from src.integrations.bale.keyboards import my_reports_keyboard
 REJECT_SESSIONS = {}
 
 class MessageRouter:
@@ -191,12 +192,73 @@ class MessageRouter:
            return await self.request_handler.remained_leave_hours(str(user_id))
 
 
-        if text == "همه درخواست ها":
+        if text == "همه درخواست های مرخصی":
 
 
             if not accesses["role"]=="HR" or accesses["role"]=="CEO":
                     return await self.user_handler.handle_start(user_id)
-            return await self.request_handler.show_all_requests(user_id)
+            return await self.request_handler.show_all_leave_requests(user_id)
+
+        if text == "گزارش های من" :
+            if not accesses["role"]=="HR":
+               return await self.user_handler.handle_start(user_id)
+
+            return await self.report_handler.show_hr_reports(
+            user_id
+            )
+        
+        if text == "گزارش های تیم":
+
+            if not accesses["is_manager"]:
+
+               raise PermissionError(
+              "You are not allowed to view team requests"
+              )
+            
+            await self.bale_client.send_message(
+            bale_user_id,
+            "نوع گزارش را انتخاب کنید:",
+            keyboard=my_reports_keyboard()
+            )
+
+            return
+        
+        if text == "گزارش روزانه":
+
+           if not accesses["is_manager"]:
+              return await self.user_handler.handle_start(bale_user_id)
+
+           return await self.report_handler.show_team_daily_report(
+           user_id
+           )
+
+
+        if text == "گزارش هفتگی":
+
+           if not accesses["is_manager"]:
+              return await self.user_handler.handle_start(bale_user_id)
+
+           return await self.report_handler.show_team_weekly_report(
+               user_id
+           )
+
+
+        if text == "گزارش ماهانه":
+
+           if not accesses["is_manager"]:
+              return await self.user_handler.handle_start(bale_user_id)
+
+           return await self.report_handler.show_team_monthly_report(
+            user_id
+           )
+
+
+        if text == "🔙 بازگشت":
+
+           return await self.user_handler.handle_start(
+           bale_user_id
+        )
+              
         
         if text == "My Reports":
 

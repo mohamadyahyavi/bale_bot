@@ -83,7 +83,7 @@ class RequestRepository:
     async def get_by_id(
     self,
     request_id
-):
+    ):
 
         stmt = (
         select(RequestModel)
@@ -168,7 +168,7 @@ class RequestRepository:
     async def get_by_department(
     self,
     department_id
-):
+    ):
 
         stmt = (
         select(RequestModel)
@@ -206,6 +206,36 @@ class RequestRepository:
           result = await self.session.execute(stmt)
 
           return result.scalars().all()
+
+
+    async def get_month_approved_leaves(self):
+        
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        )
+
+        stmt = (
+        select(RequestModel)
+        .where(
+            
+            RequestModel.type == RequestType.LEAVE,
+            RequestModel.status == RequestStatus.ACCEPTED,
+            RequestModel.created_at >= begin,
+        )
+        .order_by(RequestModel.created_at.desc())
+        )
+
+        result = await self.session.execute(stmt)
+        requests = result.scalars().all()
+
+        return [self._to_entity(r) for r in requests]       
     
 
     async def update(
@@ -248,14 +278,15 @@ class RequestRepository:
         return self._to_entity(model)
     
 
-    async def get_all_requests(self):
+    async def get_all_leave_requests(self):
 
         thirty_days_ago = datetime.now() - timedelta(days=30)
 
         stmt = (
         select(RequestModel)
         .where(
-            RequestModel.created_at >= thirty_days_ago
+            RequestModel.created_at >= thirty_days_ago,
+            RequestModel.type == RequestType.LEAVE,
         )
         .order_by(RequestModel.created_at.desc())
         )
