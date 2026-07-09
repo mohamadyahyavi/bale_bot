@@ -1,7 +1,7 @@
 from datetime import datetime, time,timedelta
 from collections import defaultdict
 from .client import KimaiClient
-
+import httpx
 
 class KimaiService:
 
@@ -40,6 +40,65 @@ class KimaiService:
             "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
         },
       )
+    
+
+    async def create_timesheet(
+       self,
+       begin: str,
+       end: str,
+       project: int,
+       activity: int,
+       description: str,
+       kimai_user_id: int,
+       ):
+
+        payload = {
+        "begin": begin,
+        "end": end,
+        "project": project,
+        "activity": activity,
+        "description": description,
+        "user": kimai_user_id,
+        }
+
+
+        try:
+           return await self.client.post(
+            "/api/timesheets",
+            json=payload,
+           )
+
+        except httpx.HTTPStatusError as e:
+          
+          status_code = e.response.status_code
+          response_body = e.response.text.lower()
+
+          if status_code == 400:
+              # خطای همپوشانی
+              if (
+                "overlap" in response_body
+                or "overlapping" in response_body
+                or "already" in response_body
+                ):
+                raise ValueError("OVERLAP")
+
+              raise ValueError("INVALID_DATA")
+
+          elif status_code == 401:
+            raise ValueError("UNAUTHORIZED")
+
+          elif status_code == 403:
+            raise ValueError("FORBIDDEN")
+
+          elif status_code == 404:
+            raise ValueError("NOT_FOUND")
+
+        # سایر خطاهای HTTP
+          raise
+        except httpx.RequestError:
+          raise ValueError("CONNECTION_ERROR")
+
+    
     
 
     async def get_current_month_timesheets(
@@ -206,7 +265,31 @@ class KimaiService:
 
         return await self.client.get(
         "/api/activities"
-        )    
+        )
+
+    async def get_all_projects(self):
+
+        return await self.client.get(
+        "/api/projects"
+        )
+
+    async def has_overlap(
+    self,
+    kimai_user_id: int,
+    begin: datetime,
+    end: datetime,
+    ) -> bool:
+
+      entries = await self.client.get(
+        "/api/timesheets",
+        params={
+            "user": kimai_user_id,
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": end.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+    )
+
+      return len(entries) > 0    
     
     async def get_today_activity_durations(self, kimai_user_id: int):
 

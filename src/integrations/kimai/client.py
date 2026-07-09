@@ -47,3 +47,30 @@ class KimaiClient:
             response.raise_for_status()
 
             return response.json()
+        
+    async def post(
+       self,
+       endpoint: str,
+       json: dict,
+       ):
+
+       async with httpx.AsyncClient(
+        base_url=self.base_url,
+        headers=self.headers,
+        timeout=self.timeout,
+       ) as client:
+
+            response = await client.post(
+            endpoint,
+            json=json,
+            )
+
+            print("URL:", response.request.url)
+            print("STATUS:", response.status_code)
+
+            if response.status_code not in (200, 201):
+               print("BODY:", response.text)
+
+            response.raise_for_status()
+
+            return response.json()

@@ -5,7 +5,7 @@ from src.integrations.bale.handlers.message_router import MessageRouter
 from src.integrations.bale.handlers.user_handler import UserHandler
 from src.integrations.bale.handlers.request_handler import RequestHandler
 from src.integrations.bale.handlers.report_handler import ReportHandler
-
+from src.integrations.bale.handlers.time_entry_handler import TimeEntryHandler
 from src.modules.users.repository import UserRepository
 from src.modules.requests.repository import RequestRepository
 from src.modules.departments.repository import DepartmentRepository
@@ -78,12 +78,14 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     )
 
     report_handler = ReportHandler(user_repository,department_repository,kimai_service,request_repository,bale_client)
-
+    time_entry_handler = TimeEntryHandler(kimai_service,user_repository,bale_client)
     # -------------------------
     # ROUTER (ENTRYPOINT)
     # -------------------------
     return MessageRouter(
         user_handler=user_handler,
+        kimai_service=kimai_service,
+        time_entry_handler=time_entry_handler,
         request_handler=request_handler,
         access_control_service=access_control_service,
         user_service=user_service,

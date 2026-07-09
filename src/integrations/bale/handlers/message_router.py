@@ -4,16 +4,22 @@ from src.modules.users.service import UserService
 from src.modules.requests.enums import RequestType
 from src.integrations.bale.client import BaleClient 
 from .report_handler import ReportHandler
-from src.integrations.bale.client import BaleClient 
+from src.integrations.bale.client import BaleClient
+from src.integrations.kimai.service import KimaiService 
+from .time_entry_handler import TimeEntryHandler
 from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
-from src.integrations.bale.keyboards import my_reports_keyboard
+from src.integrations.bale.keyboards import my_reports_keyboard,projects_keyboard
 REJECT_SESSIONS = {}
+TIME_ENTRY_SESSIONS = {}
+
 
 class MessageRouter:
 
-    def __init__(self, user_handler:UserHandler, request_handler:RequestHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
+    def __init__(self, user_handler:UserHandler,kimai_service:KimaiService,time_entry_handler:TimeEntryHandler, request_handler:RequestHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
         self.user_handler = user_handler
+        self.kimai_service = kimai_service
+        self.time_entry_handler = time_entry_handler
         self.request_handler = request_handler
         self.access_control_service = access_control_service
         self.user_service = user_service
@@ -57,14 +63,12 @@ class MessageRouter:
                 request_id
              )
 
-
              if request.message_id:
 
                 await self.bale_client.delete_message(
                 bale_user_id,
                 int(request.message_id)
                 )
-
 
              return
 
@@ -164,12 +168,25 @@ class MessageRouter:
             print(f"{key}: {value}")
         print("mashti")
 
+        projects= await self.kimai_service.get_all_projects()
         if text == "/start":
             print("Hello-bale")
             return await self.user_handler.handle_start(bale_user_id)
 
         if text == "ثبت درخواست جدید":
            return await self.request_handler.start_flow(bale_user_id)
+        
+        if text == "ثبت ساعت و پروژه":
+
+            #await self.bale_client.send_message(
+            #bale_user_id,
+            #"پروژه مورد نظر خود را انتخاب کنید:",
+            #keyboard=projects_keyboard(projects)
+            #)
+            return await self.time_entry_handler.start_flow(
+            bale_user_id
+            )
+
         
         if text == "درخواست های من":
 
@@ -281,10 +298,18 @@ class MessageRouter:
             return await self.report_handler.show_all_reports(
                 user_id
             )
+        
+
+        if await self.time_entry_handler.is_in_flow(bale_user_id):
+           return await self.time_entry_handler.handle_message(
+           bale_user_id,
+           text
+        )
+        
 
         if text in ["LEAVE", "REMOTE", "OVERTIME", "MISSION"]:
             return await self.request_handler.handle_message(bale_user_id, text)
-        
+          
         if await self.request_handler.is_in_flow(
             user_id
         ):
@@ -293,4 +318,4 @@ class MessageRouter:
                 text
             )
 
-        return await self.request_handler.handle_message(bale_user_id, text)
+        return await self.user_handler.handle_start(bale_user_id)

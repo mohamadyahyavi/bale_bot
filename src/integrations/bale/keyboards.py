@@ -31,6 +31,42 @@ def request_action_keyboard(request_id):
     }
 
 
+def projects_keyboard(projects):
+
+    keyboard = MenuKeyboardMarkup()
+
+    for project in projects:
+        keyboard.add(
+            MenuKeyboardButton(
+                project["name"]
+            )
+        )
+
+    keyboard.add(
+        MenuKeyboardButton("🔙 بازگشت")
+    )
+
+    return keyboard
+
+
+
+def activities_keyboard(activities):
+
+    keyboard = MenuKeyboardMarkup()
+
+    for activity in activities:
+        keyboard.add(
+            MenuKeyboardButton(
+                activity["name"]
+            )
+        )
+
+    keyboard.add(
+        MenuKeyboardButton("🔙 بازگشت")
+    )
+
+    return keyboard
+
 def my_reports_keyboard():
 
     keyboard = MenuKeyboardMarkup()
@@ -62,7 +98,7 @@ def employee_keyboard():
     )
 
     keyboard.add(
-        MenuKeyboardButton("ثبت ساعت")
+        MenuKeyboardButton("ثبت ساعت و پروژه")
     )
 
     keyboard.add(
@@ -92,7 +128,7 @@ def manager_keyboard():
     )
 
     keyboard.add(
-        MenuKeyboardButton("ثبت ساعت")
+        MenuKeyboardButton("ثبت ساعت و پروژه")
     )
 
     keyboard.add(
@@ -126,7 +162,7 @@ def hr_keyboard():
     )
 
     keyboard.add(
-        MenuKeyboardButton("ثبت ساعت")
+        MenuKeyboardButton("ثبت ساعت و پروژه")
     )
 
     keyboard.add(
@@ -164,7 +200,7 @@ def ceo_keyboard():
     )
 
     keyboard.add(
-        MenuKeyboardButton("ثبت ساعت")
+        MenuKeyboardButton("ثبت ساعت و پروژه")
     )
 
     keyboard.add(
