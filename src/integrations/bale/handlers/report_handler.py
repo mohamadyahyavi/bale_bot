@@ -225,7 +225,112 @@ class ReportHandler:
        await self.bale.send_message(
         manager.bale_user_id,
         message
-       )       
+       )
+
+    async def show_my_monthly_report(self, user_id: str):
+
+       user = await self.user_repository.get_by_id(user_id)
+
+
+       message = "👥 گزارش ماهانه من\n\n"
+
+       worked_hours = await self.kimai_service.get_month_worked_duration(
+            user.kimai_user_id
+          )
+
+       activities = await self.kimai_service.get_month_activity_duration(
+            user.kimai_user_id
+          )
+
+       message += (
+            f"👤 {user.first_name} {user.last_name}\n"
+            f"⏱ کارکرد ماه: {worked_hours}\n"
+            f"📋 فعالیت‌ها:\n"
+            )
+
+       if activities:
+            for activity in activities:
+                message += (
+                    f" {activity['activity']} : {activity['duration']}\n"
+                )
+       else:
+            message += "• فعالیتی ثبت نشده است.\n"
+
+            message += "\n"
+
+       await self.bale.send_message(
+        user.bale_user_id,
+        message
+       )
+
+    async def show_my_weekly_report(self, user_id: str):
+
+       user = await self.user_repository.get_by_id(user_id)
+
+
+       message = "👥 گزارش هفته جاری من\n\n"
+
+       worked_hours = await self.kimai_service.get_week_worked_duration(
+            user.kimai_user_id
+          )
+
+       activities = await self.kimai_service.get_week_activity_duration(
+            user.kimai_user_id
+          )
+
+       message += (
+            f"👤 {user.first_name} {user.last_name}\n"
+            f"⏱ کارکرد هفته: {worked_hours}\n"
+            f"📋 فعالیت‌ها:\n"
+            )
+
+       if activities:
+            for activity in activities:
+                message += (
+                    f" {activity['activity']} : {activity['duration']}\n"
+                )
+       else:
+            message += "• فعالیتی ثبت نشده است.\n"
+
+            message += "\n"
+
+       await self.bale.send_message(
+        user.bale_user_id,
+        message
+       )
+
+    async def show_my_daily_report(self, user_id: str):
+
+        user = await self.user_repository.get_by_id(user_id)
+
+        message = "👥 گزارش روزانه \n\n"
+
+        message += f"👤 {user.first_name} {user.last_name}\n"
+        
+        worked_hours = await self.kimai_service.get_today_worked_duration(
+            user.kimai_user_id
+            )
+        activities = await self.kimai_service.get_today_activity_durations(
+            user.kimai_user_id
+            )
+        message += (
+            f"⏱ کارکرد امروز: {worked_hours}\n"
+            f"📋 فعالیت‌ها:\n"
+            )
+        if activities:
+              for activity in activities:
+                message += (
+                    f"{activity['activity']} : {activity['duration']}\n"
+                )
+        else:
+              message += " • فعالیتی ثبت نشده است.\n"
+
+        message += "\n"
+
+        await self.bale.send_message(
+            user.bale_user_id,
+            message
+        )            
 
     
     # =========================
@@ -256,46 +361,32 @@ class ReportHandler:
         )
 
     # =========================
-    # WEEKLY REPORT (USER)
-    # =========================
-    async def show_my_weekly_report(self, user_id: str):
-
-        user = await self.user_service.get_by_id(user_id)
-
-        today = date.today()
-        start = today - timedelta(days=7)
-
-        report = await self.report_service.weekly(user, start, today)
-
-        message = (
-            "📅 گزارش هفتگی شما\n\n"
-            f"⏱ مجموع: {report['worked_hours']}\n"
-            f"⚠️ کسری: {report['missing_hours']}\n"
-            f"➕ اضافه‌کاری: {report['overtime_hours']}\n"
-        )
-
-        await self.bale.send_message(user.bale_user_id, message)
-
-    # =========================
     # MONTHLY REPORT (USER)
     # =========================
-    async def show_my_monthly_report(self, user_id: str):
 
-        user = await self.user_service.get_by_id(user_id)
+    async def my_today_status_report(self,user_id):
+          
+        user = await self.user_repository.get_by_id(user_id)
 
-        today = date.today()
+        message = "👥 وضعیت امروز من\n\n"
 
-        report = await self.report_service.monthly(
-            user,
-            today.month,
-            today.year
-        )
+        message += f"👤 {user.first_name} {user.last_name}\n"
+        worked = await self.kimai_service.has_work_started_today(user.kimai_user_id)
+        active_timer = await self.kimai_service.has_active_timer(user.kimai_user_id)
+        if not worked:
+           message += " .وضعیت: ❌ هنوز ساعت ثبت نکرده اید\n\n"   
+        else:   
+           worked_hours = await self.kimai_service.get_today_worked_duration(
+             user.kimai_user_id
+             )
+           message += (
+            f"⏱ کارکرد امروز: {worked_hours}\n")
+        if not active_timer:
+           message += " .وضعیت: ❌ شما تایمر فعال ندارید\n\n"
+        else:
+           message += " .وضعیت: شما تایمر فعال دارید\n\n"    
 
-        message = (
-            "📆 گزارش ماهانه شما\n\n"
-            f"⏱ مجموع: {report['worked_hours']}\n"
-            f"⚠️ کسری: {report['missing_hours']}\n"
-            f"➕ اضافه‌کاری: {report['overtime_hours']}\n"
-        )
-
-        await self.bale.send_message(user.bale_user_id, message)
+        await self.bale.send_message(
+            user.bale_user_id,
+            message
+        )  

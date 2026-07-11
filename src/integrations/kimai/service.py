@@ -186,7 +186,7 @@ class KimaiService:
 
       return f"{hours}:{minutes:02d}"
 
-    async def get_week_activity_durations(
+    async def get_week_activity_duration(
        self,
        kimai_user_id: int,
     ):
@@ -487,15 +487,22 @@ class KimaiService:
         kimai_user_id: int,
     ) -> bool:
 
-        entries = await self.client.get(
-            "/api/timesheets",
-            params={
-                "user": kimai_user_id,
-                "active": 1,
-            },
-        )
+        timesheets = await self.get_today_timesheets(
+        kimai_user_id
+    )
 
-        return len(entries) > 0
+        now = datetime.now().astimezone()
+
+        return any(
+        datetime.strptime(
+            t["begin"],
+            "%Y-%m-%dT%H:%M:%S%z"
+        ) <= now <= datetime.strptime(
+            t["end"],
+            "%Y-%m-%dT%H:%M:%S%z"
+        )
+        for t in timesheets
+        )
 
     async def get_active_timers(
         self,

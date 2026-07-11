@@ -36,13 +36,13 @@ class UserHandler:
 
         if context["role"] == "CEO":
             return ceo_keyboard()
-        
 
         if context["is_manager"]:
-            return manager_keyboard()  
+            return manager_keyboard()      
         
 
         if context["role"] == "HR":
-            return hr_keyboard()  
+            return hr_keyboard()
+          
               
         return employee_keyboard()

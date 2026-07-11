@@ -78,9 +78,11 @@ class RequestFormEngine:
 
             "steps": [
                 "destination",
-                "start_datetime",
-                "end_datetime",
-                "reason"
+                "start_date",
+                "end_date",
+                "reason",
+                "explanation"
+
             ],
 
             "questions": {
@@ -88,14 +90,16 @@ class RequestFormEngine:
                 "destination":
                     "Enter mission destination:",
 
-                "start_datetime":
-                    "Enter start date/time:",
+                "start_date":
+                    "Enter start date/time (like 2026-04-01):",
 
-                "end_datetime":
+                "end_date":
                     "Enter end date/time:",
 
                 "reason":
-                    "Write reason:"
+                    "Write reason:",
+                "explanation":
+                    "write details:"      
             }
         }
     }
@@ -152,6 +156,8 @@ class RequestFormEngine:
 
         if index + 1 >= len(steps):
             return None
+        
+        print("MISSION")
 
 
         return steps[index + 1]
@@ -210,32 +216,47 @@ class RequestFormEngine:
     step: str,
     value: str
 ):
-
        value = value.strip()
 
        if not value:
           return False
 
+    # Leave type
        if step == "leave_type":
-          return value.upper() in [
-            "DAILY",
-            "HOURLY"
-        ]
+          return value.upper() in ["DAILY", "HOURLY"]
 
+    # Overtime hours
        if step == "hours":
           return value.isdigit()
 
+    # Datetime fields (Leave)
        if step in [
           "start_datetime",
           "end_datetime"
-        ]:
-         try:
+       ]:
+          try:
             datetime.strptime(
                 value,
                 "%Y-%m-%d %H:%M:%S"
+               )
+            return True
+          except ValueError:
+              return False
+
+    # Date fields (Mission, Remote, Overtime)
+       if step in [
+        "start_date",
+        "end_date",
+        "date"
+        ]:
+        try:
+            datetime.strptime(
+                value,
+                "%Y-%m-%d"
             )
             return True
-         except ValueError:
+        except ValueError:
             return False
 
        return True
+

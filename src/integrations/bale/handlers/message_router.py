@@ -9,7 +9,7 @@ from src.integrations.kimai.service import KimaiService
 from .time_entry_handler import TimeEntryHandler
 from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
-from src.integrations.bale.keyboards import my_reports_keyboard,projects_keyboard
+from src.integrations.bale.keyboards import team_reports_keyboard,projects_keyboard,my_reports_keyboard
 REJECT_SESSIONS = {}
 TIME_ENTRY_SESSIONS = {}
 
@@ -216,7 +216,7 @@ class MessageRouter:
                     return await self.user_handler.handle_start(user_id)
             return await self.request_handler.show_all_leave_requests(user_id)
 
-        if text == "گزارش های من" :
+        if text == "گزارش  منابع انسانی" :
             if not accesses["role"]=="HR":
                return await self.user_handler.handle_start(user_id)
 
@@ -232,15 +232,15 @@ class MessageRouter:
               "You are not allowed to view team requests"
               )
             
-            await self.bale_client.send_message(
+            return await self.bale_client.send_message(
             bale_user_id,
             "نوع گزارش را انتخاب کنید:",
-            keyboard=my_reports_keyboard()
+            keyboard=team_reports_keyboard()
             )
 
-            return
+            
         
-        if text == "گزارش روزانه":
+        if text == "گزارش روزانه تیم":
 
            if not accesses["is_manager"]:
               return await self.user_handler.handle_start(bale_user_id)
@@ -248,9 +248,13 @@ class MessageRouter:
            return await self.report_handler.show_team_daily_report(
            user_id
            )
+        
+        if text == "کارکرد و تاخیر های من":
 
+            return await self.report_handler.my_monthly_work_and_delay(user_id)
+    
 
-        if text == "گزارش هفتگی":
+        if text == "گزارش هفتگی تیم":
 
            if not accesses["is_manager"]:
               return await self.user_handler.handle_start(bale_user_id)
@@ -260,7 +264,9 @@ class MessageRouter:
            )
 
 
-        if text == "گزارش ماهانه":
+
+
+        if text == "گزارش ماهانه تیم":
 
            if not accesses["is_manager"]:
               return await self.user_handler.handle_start(bale_user_id)
@@ -277,18 +283,35 @@ class MessageRouter:
         )
               
         
-        if text == "My Reports":
+        if text == "گزارش های من":
 
-            if not permissions["can_view_my_reports"]:
-                return await self.user_handler.handle_start(user_id)
-            return await self.report_handler.show_my_reports(
-                user_id
+            return await self.bale_client.send_message(
+            bale_user_id,
+            "نوع گزارش را انتخاب کنید:",
+            keyboard=my_reports_keyboard()
             )
 
-        if text == "Team Reports":
-            if not permissions["can_view_team_reports"]:
-                return await self.user_handler.handle_start(user_id)
-            return await self.report_handler.show_team_reports(
+        if text == "گزارش ماهانه":
+        
+            return await self.report_handler.show_my_monthly_report(
+                user_id
+            )
+        
+        if text == "گزارش هفتگی":
+        
+            return await self.report_handler.show_my_weekly_report(
+                user_id
+            )
+        
+        if text == "گزارش روزانه":
+        
+            return await self.report_handler.show_my_daily_report(
+                user_id
+            )
+        
+        if text == "وضعیت امروز من":
+        
+            return await self.report_handler.my_today_status_report(
                 user_id
             )
 
@@ -311,7 +334,7 @@ class MessageRouter:
             return await self.request_handler.handle_message(bale_user_id, text)
           
         if await self.request_handler.is_in_flow(
-            user_id
+            bale_user_id
         ):
             return await self.request_handler.handle_message(
                 bale_user_id,
