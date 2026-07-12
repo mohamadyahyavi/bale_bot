@@ -158,11 +158,14 @@ def manager_keyboard():
     keyboard.add(MenuKeyboardButton("ثبت ساعت و پروژه"))
     keyboard.add(MenuKeyboardButton("ثبت درخواست جدید"))
     keyboard.add(MenuKeyboardButton("گزارش های من"))
+    keyboard.add(MenuKeyboardButton("گزارش های تیم"))
     keyboard.add(MenuKeyboardButton("وضعیت امروز من"))
+    keyboard.add(MenuKeyboardButton( "گزارش فعالیت ها"))
+
 
     keyboard.add(MenuKeyboardButton("درخواست های تیم"))
     keyboard.add(MenuKeyboardButton("مانده مرخصی من"))
-    keyboard.add(MenuKeyboardButton("گزارش های تیم"))
+    
     keyboard.add(MenuKeyboardButton("کارکرد و تاخیر های من"))
 
     return keyboard

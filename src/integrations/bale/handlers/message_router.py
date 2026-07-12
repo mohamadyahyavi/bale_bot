@@ -168,7 +168,7 @@ class MessageRouter:
             print(f"{key}: {value}")
         print("mashti")
 
-        projects= await self.kimai_service.get_all_projects()
+        #projects= await self.kimai_service.get_all_projects()
         if text == "/start":
             print("Hello-bale")
             return await self.user_handler.handle_start(bale_user_id)
@@ -302,6 +302,13 @@ class MessageRouter:
             return await self.report_handler.show_my_weekly_report(
                 user_id
             )
+        if text == "گزارش فعالیت ها":
+
+           #if not accesses["is_manager"] or accesses["role"]=="HR" :
+             # return await self.user_handler.handle_start(bale_user_id)
+           return await self.report_handler.show_activity_report(user_id)
+                
+
         
         if text == "گزارش روزانه":
         

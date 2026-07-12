@@ -254,7 +254,7 @@ class ReportHandler:
                     f" {activity['activity']} : {activity['duration']}\n"
                 )
        else:
-            message += "• فعالیتی ثبت نشده است.\n"
+            message += "• فعالیتی ثبت نشده است\n"
 
             message += "\n"
 
@@ -262,6 +262,35 @@ class ReportHandler:
         user.bale_user_id,
         message
        )
+
+    async def show_activity_report(self, user_id: str):
+
+       user = await self.user_repository.get_by_id(user_id)
+
+       activities = await self.kimai_service.get_activity_report()
+       print(activities)
+
+       message = "📊 گزارش Activity ماه جاری\n\n"
+
+
+       if not activities:
+
+        message += "• هیچ فعالیتی ثبت نشده است."
+
+       else:
+
+         for activity in activities:
+
+            message += (
+                f"📌 {activity['activity_name']}\n"
+                f"⏱ زمان صرف شده: {activity['time']}\n\n"
+            )
+
+
+       await self.bale.send_message(
+        user.bale_user_id,
+        message
+        )
 
     async def show_my_weekly_report(self, user_id: str):
 

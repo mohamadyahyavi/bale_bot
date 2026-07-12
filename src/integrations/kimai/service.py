@@ -142,6 +142,28 @@ class KimaiService:
                 "end": end.strftime("%Y-%m-%dT%H:%M:%S"),
             },
         )
+
+    async def get_all_current_month_timesheets(
+       self,
+     ):
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        )
+
+        return await self.client.get(
+        "/api/timesheets",
+        params={
+            "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+            "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        },
+    )    
     
     async def get_week_worked_duration(
       self,
@@ -562,3 +584,76 @@ class KimaiService:
             "active_timer": active_timer,
             "entries": entries,
         }
+
+    async def get_activity_report(self):
+
+        now = datetime.now()
+
+        begin = datetime(
+        year=now.year,
+        month=now.month,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        )
+
+        users = await self.client.get("/api/users")
+
+        activities = await self.client.get("/api/activities")
+
+        activity_map = {
+        activity["id"]: activity["name"]
+        for activity in activities
+        }
+
+        activity_durations = defaultdict(int)
+
+        for user in users:
+
+           
+
+            timesheets = await self.client.get(
+            "/api/timesheets",
+            params={
+                "user": user["id"],
+                "begin": begin.strftime("%Y-%m-%dT%H:%M:%S"),
+                "end": now.strftime("%Y-%m-%dT%H:%M:%S"),
+            },
+        )
+
+            for timesheet in timesheets:
+
+                activity_id = timesheet.get("activity")
+
+                if activity_id is None:
+                   continue
+
+                duration = timesheet.get("duration") or 0
+
+                activity_durations[activity_id] += duration
+
+        report = []
+
+        for activity in activities:
+
+            seconds = activity_durations.get(activity["id"], 0)
+
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+
+            report.append(
+            {
+                "activity_id": activity["id"],
+                "activity_name": activity["name"],
+                "time": f"{hours:02d}:{minutes:02d}",
+                "duration_seconds": seconds,
+            }
+        )
+
+        report.sort(
+        key=lambda x: x["duration_seconds"],
+        reverse=True,
+        )
+
+        return report
