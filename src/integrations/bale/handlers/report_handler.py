@@ -418,4 +418,27 @@ class ReportHandler:
         await self.bale.send_message(
             user.bale_user_id,
             message
-        )  
+        )
+
+    async def my_monthly_work_and_delay(self, user_id: str):
+
+        user = await self.user_repository.get_by_id(user_id)
+
+        worked_hours = await self.kimai_service.get_month_worked_duration(
+        user.kimai_user_id
+        )
+
+        delays = await self.kimai_service.get_month_delay_hours(
+        user.kimai_user_id
+        )
+
+        message = (
+        "📊 گزارش کارکرد و تأخیر ماه جاری\n\n"
+        f"⏱ کارکرد ماه: {worked_hours}\n"
+        f"⏳ مجموع تأخیرها: {delays}"
+        )
+
+        await self.bale.send_message(
+        user.bale_user_id,
+        message
+        )      

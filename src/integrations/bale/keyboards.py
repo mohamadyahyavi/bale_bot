@@ -154,20 +154,20 @@ def manager_keyboard():
 
     keyboard = MenuKeyboardMarkup()
 
-    keyboard.add(MenuKeyboardButton("درخواست های من"))
-    keyboard.add(MenuKeyboardButton("ثبت ساعت و پروژه"))
-    keyboard.add(MenuKeyboardButton("ثبت درخواست جدید"))
-    keyboard.add(MenuKeyboardButton("گزارش های من"))
-    keyboard.add(MenuKeyboardButton("گزارش های تیم"))
-    keyboard.add(MenuKeyboardButton("وضعیت امروز من"))
-    keyboard.add(MenuKeyboardButton( "گزارش فعالیت ها"))
+    keyboard.add(MenuKeyboardButton("درخواست های من"), row=1)
+    keyboard.add(MenuKeyboardButton("ثبت ساعت و پروژه"), row=1)
 
+    keyboard.add(MenuKeyboardButton("ثبت درخواست جدید"), row=2)
+    keyboard.add(MenuKeyboardButton("گزارش های من"), row=2)
 
-    keyboard.add(MenuKeyboardButton("درخواست های تیم"))
-    keyboard.add(MenuKeyboardButton("مانده مرخصی من"))
-    
-    keyboard.add(MenuKeyboardButton("کارکرد و تاخیر های من"))
+    keyboard.add(MenuKeyboardButton("گزارش های تیم"), row=3)
+    keyboard.add(MenuKeyboardButton("وضعیت امروز من"), row=3)
 
+    keyboard.add(MenuKeyboardButton("گزارش فعالیت ها"), row=4)
+    keyboard.add(MenuKeyboardButton("درخواست های تیم"), row=4)
+
+    keyboard.add(MenuKeyboardButton("مانده مرخصی من"), row=5)
+    keyboard.add(MenuKeyboardButton("کارکرد و تاخیر های من"), row=5)
     return keyboard
 
 
@@ -175,42 +175,20 @@ def hr_keyboard():
 
     keyboard = MenuKeyboardMarkup()
 
+    keyboard.add(MenuKeyboardButton("درخواست های من"), row=1)
+    keyboard.add(MenuKeyboardButton("ثبت ساعت و پروژه"), row=1)
 
-    keyboard.add(
-        MenuKeyboardButton("درخواست های من")
-    )
+    keyboard.add(MenuKeyboardButton("ثبت درخواست جدید"), row=2)
+    keyboard.add(MenuKeyboardButton("گزارش های من"), row=2)
 
-    keyboard.add(
-        MenuKeyboardButton("ثبت ساعت و پروژه")
-    )
+    keyboard.add(MenuKeyboardButton("همه درخواست های مرخصی"), row=3)
+    keyboard.add(MenuKeyboardButton("گزارش منابع انسانی"), row=3)
 
-    keyboard.add(
-        MenuKeyboardButton("ثبت درخواست جدید")
-    )
+    keyboard.add(MenuKeyboardButton("مانده مرخصی من"), row=4)
+    keyboard.add(MenuKeyboardButton("کارکرد و تاخیر های من"), row=4)
 
-    keyboard.add(
-        MenuKeyboardButton("گزارش های من")
-    )
-
-    keyboard.add(
-        MenuKeyboardButton("همه درخواست های مرخصی")
-    )
-
-    keyboard.add(
-        MenuKeyboardButton("گزارش منابع انسانی")
-    )
-    keyboard.add(
-        MenuKeyboardButton("مانده مرخصی من")
-    )
-
-    keyboard.add(
-        MenuKeyboardButton("کارکرد و تاخیر های من")
-    )
-
-    keyboard.add(
-        MenuKeyboardButton("وضعیت امروز من")
-    )
-
+    keyboard.add(MenuKeyboardButton("وضعیت امروز من"), row=5)
+    keyboard.add(MenuKeyboardButton("گزارش فعالیت ها"), row=5)
 
     return keyboard
 
