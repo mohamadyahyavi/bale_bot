@@ -24,8 +24,6 @@ class UserService:
 
         return await self.user_repository.get_by_id(user_id)
 
-
-
     async def get_user_menu_role(
         self,
         bale_user_id: str
@@ -60,8 +58,6 @@ class UserService:
             "is_manager": is_manager
 
         }
-
-
 
     async def get_department_users(
         self,

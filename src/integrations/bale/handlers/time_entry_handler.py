@@ -8,6 +8,8 @@ from .time_entry_form import TimeEntryForm
 from src.integrations.bale.client import BaleClient
 from src.integrations.kimai.service import KimaiService
 from src.modules.users.repository import UserRepository
+from src.modules.logs.service import LogService
+from src.modules.logs.enums import LogAction
 
 
 TIME_ENTRY_SESSIONS = {}
@@ -20,12 +22,14 @@ class TimeEntryHandler:
         self,
         kimai_service:KimaiService,
         user_repositpry:UserRepository,
-        bale_client:BaleClient
+        bale_client:BaleClient,
+        log_service:LogService
     ):
 
         self.kimai_service = kimai_service
         self.user_repository=user_repositpry
         self.bale = bale_client
+        self.log_service = log_service
         self.form = TimeEntryForm()
 
     # =========================
@@ -284,6 +288,7 @@ class TimeEntryHandler:
             end_datetime = (
                 f"{today}T{data['end']}:00"
             )
+            user = await self.user_repository.get_by_bale_id(bale_user_id)
 
 
             try:
@@ -305,6 +310,18 @@ class TimeEntryHandler:
 
                 )
 
+                await self.log_service.log_success(
+                user_id=user.id,
+                action=LogAction.CREATE_TIMESHEET,
+                description=(
+                f"ثبت ساعت کاری | "
+                f"شروع: {begin_datetime} | "
+                f"پایان: {end_datetime} | "
+                f"پروژه: {data['project']} | "
+                f"فعالیت: {data['activity']}"
+            )
+        )
+
 
                 del TIME_ENTRY_SESSIONS[bale_user_id]
 
@@ -315,6 +332,18 @@ class TimeEntryHandler:
 
 
             except Exception as e:
+
+                await self.log_service.log_failed(
+                user_id=user.id,
+                action=LogAction.CREATE_TIMESHEET,
+                description=(
+                f"ثبت ساعت ناموفق | "
+                f"شروع: {begin_datetime} | "
+                f"پایان: {end_datetime} | "
+                f"خطا: {str(e)}"
+            )
+        )
+
 
                 return await self.bale.send_message(
                     bale_user_id,

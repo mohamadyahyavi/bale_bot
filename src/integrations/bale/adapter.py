@@ -18,35 +18,55 @@ class BaleUpdateAdapter:
         # -------------------------
         #message = getattr(self.update, "message", None)
 
-        if hasattr(self.update, "text"):
+        if hasattr(self.update, "text") or getattr(self.update, "document", None):
 
             user = self.update.from_user
 
-            result["message"] = {
+            message = {
                 "text": self.update.text or "",
-
                 "from": {
                     "id": str(user.id) if user else ""
                 }
             }
 
-        # -------------------------
-        # CALLBACK QUERY
-        # -------------------------
-        #callback = getattr(self.update, "callback_query", None)
+            # Document
+            if getattr(self.update, "document", None):
 
+                doc = self.update.document
+
+                message["document"] = {
+                    "file_id": doc.file_id,
+                    "file_name": doc.file_name,
+                    "file_size": doc.file_size,
+                    "mime_type": getattr(doc, "mime_type", None)
+                }
+
+            # ---------- Photo ----------
+            if getattr(self.update, "photos", None):
+
+                photos = self.update.photos
+
+                if photos:
+                    photo = photos[-1]
+
+                    message["photo"] = {
+                        "file_id": photo.file_id
+                    }
+
+            result["message"] = message    
+
+        # -------------------------
+        # CALLBACK
+        # -------------------------
         elif hasattr(self.update, "data"):
 
             user = self.update.from_user
 
             result["callback_query"] = {
-
                 "data": self.update.data or "",
-
                 "from": {
                     "id": str(user.id) if user else ""
                 }
             }
-
 
         return result

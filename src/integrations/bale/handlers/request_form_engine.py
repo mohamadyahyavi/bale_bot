@@ -16,7 +16,7 @@ class RequestFormEngine:
 
             "questions": {
 
-                "leave_type": "Select leave type (DAILY / HOURLY):",
+                "leave_type": "Select leave type (DAILY / HOURLY / SICK):",
 
                 "start_datetime": 
                     "Enter start datetime(like 2026-06-30 16:00:00):",
@@ -25,7 +25,10 @@ class RequestFormEngine:
                     "Enter end datetime:",
 
                 "reason":
-                    "Write reason:"
+                    "Write reason:",
+
+                "medical_document":
+                    "Send medical document:"    
             }
         },
 
@@ -223,7 +226,7 @@ class RequestFormEngine:
 
     # Leave type
        if step == "leave_type":
-          return value.upper() in ["DAILY", "HOURLY"]
+          return value.upper() in ["DAILY", "HOURLY", "SICK"]
 
     # Overtime hours
        if step == "hours":

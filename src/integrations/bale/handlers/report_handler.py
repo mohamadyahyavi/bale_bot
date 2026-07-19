@@ -5,6 +5,7 @@ from src.modules.departments.repository import DepartmentRepository
 from src.integrations.bale.client import BaleClient
 from src.modules.requests.repository import RequestRepository
 from src.integrations.kimai.service import KimaiService
+from src.modules.logs.service import LogAction,LogService
 
 
 class ReportHandler:
@@ -15,13 +16,15 @@ class ReportHandler:
         department_repository:DepartmentRepository,
         kimai_service:KimaiService,
         request_repository:RequestRepository,
-        bale_client: BaleClient
+        bale_client: BaleClient,
+        log_service:LogService
     ):
         self.user_repository = user_repository
         self.department_repository=department_repository
         self.kimai_service = kimai_service
         self.request_repository = request_repository
         self.bale = bale_client
+        self.log_service=log_service
 
     # =========================
     # MY REPORTS
@@ -29,56 +32,94 @@ class ReportHandler:
     async def show_hr_reports(self, user_id: str):
 
         user = await self.user_repository.get_by_id(user_id)
-        active_users = await self.user_repository.get_active_users()
-        requests = await self.request_repository.get_month_approved_leaves()
-        today = date.today()
-        message = "📊 گزارش منابع انسانی\n\n"
 
-        if requests:
-           for req in requests:
-               actor= await self.user_repository.get_by_id(req.user_id)
-               body = req.data
+        try:
 
-               start = body.get("start_datetime")
-               end = body.get("end_datetime")
-               message += (
-               f"\n درخواست مرخصی"           
-               f"\n👤 {actor.first_name} {actor.last_name}"
-               f"\n📅 شروع: {start}"
-               f"\n📅 پایان: {end}\n"
-               )
+           active_users = await self.user_repository.get_active_users()
+           requests = await self.request_repository.get_month_approved_leaves()
 
+           today = date.today()
+           message = "📊 گزارش منابع انسانی\n\n"
+
+           if requests:
+              for req in requests:
+
+                actor = await self.user_repository.get_by_id(req.user_id)
+                body = req.data
+
+                start = body.get("start_datetime")
+                end = body.get("end_datetime")
+
+                message += (
+                    f"\nدرخواست مرخصی"
+                    f"\n👤 {actor.first_name} {actor.last_name}"
+                    f"\n📅 شروع: {start}"
+                    f"\n📅 پایان: {end}\n"
+                )
 
            await self.bale.send_message(user.bale_user_id, message)
-           message="" 
-           not_started_users = []   
+
+           message = ""
+
+           not_started_users = []
+
            for active_user in active_users:
-               
-               has_started = await self.kimai_service.has_work_started_today(active_user.kimai_user_id)
-               monthly_worked_hours = await self.kimai_service.get_month_worked_duration(active_user.kimai_user_id)
-               monthly_delay_hours = await self.kimai_service.get_month_delay_hours(active_user.kimai_user_id)
+
+               has_started = await self.kimai_service.has_work_started_today(
+                active_user.kimai_user_id
+               )
+
+               monthly_worked_hours = await self.kimai_service.get_month_worked_duration(
+                active_user.kimai_user_id
+               )
+
+               monthly_delay_hours = await self.kimai_service.get_month_delay_hours(
+                active_user.kimai_user_id
+             )
+
                if not has_started:
                   not_started_users.append(active_user)
 
                message += (
-               f"\n کارکرد ماه جاری"           
-               f"\n👤 کارمند: {active_user.first_name} {active_user.last_name}"
-               f"\n  ساعت: {monthly_worked_hours}"
-               f"\n⏰ مجموع تأخیر ماه: {monthly_delay_hours} ساعت\n" 
-               )
-           await self.bale.send_message(user.bale_user_id,message)
-           message=""
-           if not_started_users:
-              message += "❌ کارکنانی که امروز هنوز ساعت کاری ثبت نکرده‌اند:\n\n"
-              for user in not_started_users:
+                f"\nکارکرد ماه جاری"
+                f"\n👤 کارمند: {active_user.first_name} {active_user.last_name}"
+                f"\n⏰ ساعت: {monthly_worked_hours}"
+                f"\n⌛ مجموع تأخیر ماه: {monthly_delay_hours}\n"
+            )
 
-                  message += (
-                  f"👤 {user.first_name} {user.last_name}\n"
-                  )
-              await self.bale.send_message(
-              hr.bale_user_id,
-              message
-              )
+           await self.bale.send_message(user.bale_user_id, message)
+
+           if not_started_users:
+
+            message = "❌ کارکنانی که امروز هنوز ساعت کاری ثبت نکرده‌اند:\n\n"
+
+            for employee in not_started_users:
+                message += (
+                    f"👤 {employee.first_name} {employee.last_name}\n"
+                )
+
+            await self.bale.send_message(
+                user.bale_user_id,
+                message
+            )
+
+        # ثبت لاگ موفق
+           await self.log_service.log_success(
+            user_id=user.id,
+            action=LogAction.VIEW_REPORT,
+            description="مشاهده گزارش منابع انسانی"
+            )
+
+        except Exception as e:
+
+        # ثبت لاگ خطا
+          await self.log_service.log_failed(
+            user_id=user.id,
+            action=LogAction.VIEW_REPORT,
+            description=str(e)
+        )
+
+          raise
 
               
 
@@ -86,6 +127,8 @@ class ReportHandler:
     # TEAM REPORTS (DAILY)
     # =========================
     async def show_team_daily_report(self, user_id: str):
+      
+      try:
 
         manager = await self.user_repository.get_by_id(user_id)
 
@@ -132,9 +175,24 @@ class ReportHandler:
             manager.bale_user_id,
             message
         )
+        await self.log_service.log_success(
+        user_id=manager.id,
+        action=LogAction.VIEW_REPORT,
+        description="مشاهده گزارش روزانه تیم"
+        )
+      except Exception as e:
+        await self.log_service.log_failed(
+        user_id=manager.id,
+        action=LogAction.VIEW_REPORT,
+        description=f"خطا در گزارش روزانه تیم: {str(e)}"
+        )
+
+        raise 
+
+           
 
     async def show_team_weekly_report(self, user_id: str):
-
+      try:
        manager = await self.user_repository.get_by_id(user_id)
 
        department = await self.department_repository.get_by_manager_id(user_id)
@@ -154,7 +212,7 @@ class ReportHandler:
             member.id
            )
 
-            activities = await self.kimai_service.get_week_activity_durations(
+            activities = await self.kimai_service.get_week_activity_duration(
             member.kimai_user_id
             )
 
@@ -179,9 +237,22 @@ class ReportHandler:
         manager.bale_user_id,
         message
         )
+       await self.log_service.log_success(
+       user_id=manager.id,
+       action=LogAction.VIEW_REPORT,
+       description="مشاهده گزارش هفتگی تیم"
+       )
+      except Exception as e:
+          await self.log_service.log_failed(
+          user_id=manager.id,
+          action=LogAction.VIEW_REPORT,
+          description=f"خطا در گزارش هفتگی تیم: {str(e)}"
+      )
+
+          raise
 
     async def show_team_monthly_report(self, user_id: str):
-
+      try:
        manager = await self.user_repository.get_by_id(user_id)
 
        department = await self.department_repository.get_by_manager_id(user_id)
@@ -226,6 +297,19 @@ class ReportHandler:
         manager.bale_user_id,
         message
        )
+       await self.log_service.log_success(
+       user_id=manager.id,
+       action=LogAction.VIEW_REPORT,
+       description="مشاهده گزارش ماهانه تیم"
+       )
+      except Exception as e:
+          await self.log_service.log_failed(
+          user_id=manager.id,
+          action=LogAction.VIEW_REPORT,
+          description=f"خطا در گزارش ماهانه تیم: {str(e)}"
+          )
+
+          raise
 
     async def show_my_monthly_report(self, user_id: str):
 

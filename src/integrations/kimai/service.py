@@ -1,12 +1,14 @@
 from datetime import datetime, time,timedelta
 from collections import defaultdict
 from .client import KimaiClient
+from src.modules.logs.service import LogService
 import httpx
 
 class KimaiService:
 
     def __init__(self, client: KimaiClient):
         self.client = client
+        #self.log_service = log_service
 
     def _today_range(self):
 
@@ -63,10 +65,16 @@ class KimaiService:
 
 
         try:
-           return await self.client.post(
-            "/api/timesheets",
-            json=payload,
+            
+           result = await self.client.post(
+           "/api/timesheets",
+           json=payload,
            )
+
+
+           return result 
+        
+           
 
         except httpx.HTTPStatusError as e:
           
@@ -80,6 +88,7 @@ class KimaiService:
                 or "overlapping" in response_body
                 or "already" in response_body
                 ):
+
                 raise ValueError("OVERLAP")
 
               raise ValueError("INVALID_DATA")

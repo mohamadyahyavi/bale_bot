@@ -7,12 +7,12 @@ from ..users.service import UserService
 from ..users.entity import User
 from ..notifications.service import NotificationService
 from ..departments.repository import DepartmentRepository
+from ..logs.service import LogService
+from ..logs.service import LogAction,LogResult
 
 from .enums import (
     RequestStatus,RequestType
 )
-
-
 
 class RequestService:
 
@@ -22,13 +22,15 @@ class RequestService:
         request_repository:RequestRepository,
         user_repository:UserRepository,
         department_repository:DepartmentRepository,
-        notification_service:NotificationService
+        notification_service:NotificationService,
+        log_service:LogService
         ):
 
         self.request_repository = request_repository
         self.user_repository = user_repository
         self.department_repository= department_repository
         self.notification_service = notification_service
+        self.log_service = log_service
 
 
 
@@ -74,8 +76,27 @@ class RequestService:
         status=RequestStatus.PENDING.value,
         data=body
       )
+       
+       try:
 
-       result = await self.request_repository.create(request)
+         result = await self.request_repository.create(request)
+         print("GOOSALE")
+         await self.log_service.log_success(
+         user_id=user.id,
+         action=LogAction.CREATE_REQUEST,
+         description=f"ثبت درخواست {request_type.value}"
+         )
+         print ("nafahm")
+
+       except Exception as e:
+
+        await self.log_service.log_failed(
+        user_id=user.id,
+        action=LogAction.CREATE_REQUEST,
+        description=str(e)
+        )
+
+        raise  
 
     # =========================
     # NOTIFICATION
@@ -138,31 +159,25 @@ class RequestService:
 
         print("REQUEST STATUS:", request.status)
         print("TYPE:", type(request.status))
-        if request.status != RequestStatus.PENDING:
-            raise Exception("Invalid state")
-
-
-        request.status = RequestStatus.ACCEPTED
-        request.processed_at = datetime.now()
-
-
-        updated_request = await self.request_repository.update(
-        request
-    )
         
-        user = await self.user_repository.get_by_id(
-        request.user_id
-    )
+        try:  
+          if request.status != RequestStatus.PENDING:
+              raise Exception("Invalid state")
+          request.status = RequestStatus.ACCEPTED
+          request.processed_at = datetime.now()
+          updated_request = await self.request_repository.update(request)
+          user=await self.user_repository.get_by_id(request.user_id)
+             
 
-        if request.type == RequestType.LEAVE:
+          if request.type == RequestType.LEAVE:
 
-           data = request.data or {}
+            data = request.data or {}
 
-           start = data.get("start_datetime")
-           end = data.get("end_datetime")
-           leave_type = data.get("leave_type")
+            start = data.get("start_datetime")
+            end = data.get("end_datetime")
+            leave_type = data.get("leave_type")
 
-           if start and end:
+            if start and end:
 
               try:
                 start_dt = datetime.fromisoformat(start)
@@ -177,7 +192,7 @@ class RequestService:
 
               hours=0 
 
-              if leave_type == "DAILY":
+              if leave_type in ["DAILY", "SICK"]:
 
                 duration_hours = (end_dt - start_dt).total_seconds() / 3600
 
@@ -217,22 +232,22 @@ class RequestService:
 
               await self.user_repository.update(user)
 
-         
-        await self.notification_service.notify_request_result(
-        user_bale_id=user.bale_user_id,
+          
+          await self.notification_service.notify_request_result(
+          user_bale_id=user.bale_user_id,
 
-        first_name=user.first_name,
+          first_name=user.first_name,
 
-        last_name=user.last_name,
+          last_name=user.last_name,
 
-        request_type=RequestType(request.type),
+          request_type=RequestType(request.type),
 
-        status=RequestStatus.ACCEPTED
-    )
+          status=RequestStatus.ACCEPTED
+          )
         
-        hr = await self.user_repository.get_hr_user() 
+          hr = await self.user_repository.get_hr_user() 
 
-        await self.notification_service.notify_request_result(
+          await self.notification_service.notify_request_result(
                 user_bale_id=hr.bale_user_id,
 
             first_name=user.first_name,
@@ -242,12 +257,29 @@ class RequestService:
             request_type=RequestType(request.type),
 
             status=RequestStatus.ACCEPTED
+            )
+          await self.log_service.log_success(
+            user_id=request.manager_id,
+            action=LogAction.APPROVE_REQUEST,
+            description=(
+                f"تایید درخواست "
+                f"{request.id}"
+            )
         )
 
 
-        return updated_request
+          return updated_request
+        except Exception as e:
 
 
+            await self.log_service.log_failed(
+            user_id=request.manager_id,
+            action=LogAction.APPROVE_REQUEST,
+            description=str(e)
+            )
+
+
+            raise
 
     async def reject_request(
         self,
@@ -271,6 +303,16 @@ class RequestService:
    
         updated_request = await self.request_repository.update(
         request
+        )
+
+        await self.log_service.log_success(
+        user_id=request.manager_id,
+        action=LogAction.REJECT_REQUEST,
+        description=(
+        f"رد درخواست {request.id} | "
+        f"کاربر: {request.user_id} | "
+        f"دلیل: {reason}"
+        )
         )
         
         user = await self.user_repository.get_by_id(

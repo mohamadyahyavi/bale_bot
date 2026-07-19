@@ -52,13 +52,11 @@ class RequestModel(Base):
         nullable=False
     )
 
-
     status = Column(
         String(20),
         nullable=False,
         default="PENDING"
     )
-
 
     data = Column(
         JSONB,
@@ -75,13 +73,10 @@ class RequestModel(Base):
         nullable=True
     )
 
-
-
     created_at = Column(
         DateTime,
         server_default=func.now()
     )
-
 
     processed_at = Column(
         DateTime,

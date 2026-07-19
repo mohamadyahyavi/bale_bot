@@ -50,7 +50,7 @@ class RequestHandler:
     # =========================
     # MAIN HANDLER
     # =========================
-    async def handle_message(self, bale_user_id: str, text: str):
+    async def handle_message(self, bale_user_id: str, message: dict):
 
         session = REQUEST_SESSIONS.get(bale_user_id)
 
@@ -59,6 +59,11 @@ class RequestHandler:
                 bale_user_id,
                 "Please start request flow first (/create_request)"
             )
+        
+        text = message.get(
+            "text",
+            ""
+        )
 
         # =========================
         # STEP 1: TYPE SELECTION
@@ -88,45 +93,128 @@ class RequestHandler:
         # =========================
         current_step = session["step"]
 
-        if not self.engine.validate(current_step, text):
-           if current_step in ["start_datetime", "end_datetime"]:
-              return await self.bale.send_message(
-              bale_user_id,
-              "❌ Invalid datetime format.\n\n"
-              "Please use this format:\n"
-              "2026-06-30 16:00:00"
-              )
-
-           if current_step == "leave_type":
-              return await self.bale.send_message(
-              bale_user_id,
-              "❌ Leave type must be DAILY or HOURLY."
-              )
-
-           if current_step == "hours":
-              return await self.bale.send_message(
-              bale_user_id,
-              "❌ Hours must be a number."
-              )
-
-           return await self.bale.send_message(
-           bale_user_id,
-           f"Invalid value for {current_step}"
-           )
+        if current_step == "medical_document":
 
 
-        # save answer
-        session["data"][current_step] = text
+            document = message.get(
+                "document"
+            )
 
-        next_step = self.engine.get_next_step(
-            session["type"],
-            current_step
-        )
+
+            if not document:
+
+                return await self.bale.send_message(
+                    bale_user_id,
+                    "❌ Please send your medical document."
+                )
+
+
+            session["data"]["medical_document"] = {
+
+                "file_id": document.get(
+                    "file_id"
+                ),
+
+                "file_name": document.get(
+                    "file_name"
+                )
+            }
+
+
+            next_step = None
+
+
+
+        else:
+
+
+            # =========================
+            # VALIDATION
+            # =========================
+
+            if not self.engine.validate(
+                current_step,
+                text
+            ):
+
+
+                if current_step in [
+                    "start_datetime",
+                    "end_datetime"
+                ]:
+
+                    return await self.bale.send_message(
+                        bale_user_id,
+                        "❌ Invalid datetime format.\n\n"
+                        "Please use this format:\n"
+                        "2026-06-30 16:00:00"
+                    )
+
+
+
+                if current_step == "leave_type":
+
+                    return await self.bale.send_message(
+                        bale_user_id,
+                        "❌ Leave type must be DAILY / HOURLY / SICK."
+                    )
+
+
+
+                if current_step == "hours":
+
+                    return await self.bale.send_message(
+                        bale_user_id,
+                        "❌ Hours must be a number."
+                    )
+
+
+
+                return await self.bale.send_message(
+                    bale_user_id,
+                    f"Invalid value for {current_step}"
+                )
+
+
+
+            # =========================
+            # SAVE ANSWER
+            # =========================
+
+            if current_step == "leave_type":
+                session["data"][current_step] = text.strip().upper()
+            else:
+                session["data"][current_step] = text
+
+
+
+            # =========================
+            # CHECK SICK LEAVE
+            # =========================
+
+            if (
+                current_step == "reason"
+                and session["data"].get("leave_type") == "SICK"
+            ):
+
+                next_step = "medical_document"
+
+
+            else:
+
+                next_step = self.engine.get_next_step(
+                    session["type"],
+                    current_step
+                )
+
+
 
         # =========================
         # FINISH FLOW
         # =========================
+
         if next_step is None:
+
 
             await self.request_service.create_request(
                 bale_user_id=bale_user_id,
@@ -134,34 +222,55 @@ class RequestHandler:
                 body=session["data"]
             )
 
-            REQUEST_SESSIONS.pop(bale_user_id, None)
+
+            REQUEST_SESSIONS.pop(
+                bale_user_id,
+                None
+            )
+
 
             return await self.bale.send_message(
                 bale_user_id,
                 "Request submitted ✔️"
             )
 
-        # move next
+
+
+        # =========================
+        # MOVE NEXT
+        # =========================
+
         session["step"] = next_step
-        return await self._ask_next(bale_user_id)
+
+
+        return await self._ask_next(
+            bale_user_id
+        )
+
+
 
     # =========================
     # NEXT QUESTION
     # =========================
-    async def _ask_next(self, bale_user_id: str):
+    async def _ask_next(
+        self,
+        bale_user_id: str
+    ):
 
         session = REQUEST_SESSIONS[bale_user_id]
+
 
         question = self.engine.get_question(
             session["type"],
             session["step"]
         )
 
+
         return await self.bale.send_message(
             bale_user_id,
             question
         )
-
+ 
     # =========================
     # LIST METHODS
     # =========================
@@ -226,45 +335,47 @@ class RequestHandler:
             [
                 f"{key}: {value}"
                 for key, value in r.data.items()
+                if key != "medical_document"
             ]
         )
 
-            user= await self.user_repository.get_by_id(r.user_id)
-            manager=await self.user_repository.get_by_id(r.manager_id)
+            user = await self.user_repository.get_by_id(r.user_id)
+            manager = await self.user_repository.get_by_id(r.manager_id)
+
             message = (
             f"👤 کارمند: {user.first_name} {user.last_name}\n"
             f"📄 نوع درخواست: {r.type.value}\n"
             f"📝 جزئیات:\n{body_text}\n\n"
             f"📊 وضعیت: {r.status.value}\n"
-            f"زمان ثبت درخواست:{r.created_at}"
+            f"🕒 زمان ثبت درخواست: {r.created_at}"
             )
-
 
             keyboard = None
 
-
-            # فقط درخواست های در انتظار بررسی
             if r.status == RequestStatus.PENDING:
-
-               print("STATUS DEBUG:", r.status, type(r.status))
-               print("PENDING ENUM:", RequestStatus.PENDING) 
-
                keyboard = request_action_keyboard(r.id)
-            
+
+        # ابتدا پیام درخواست + دکمه‌ها
             result = await self.bale.send_message(
             manager.bale_user_id,
             message,
             keyboard=keyboard
-        )
+            )
+
             if keyboard:
-
                message_id = result["result"]["message_id"]
-
                r.message_id = str(message_id)
-
-
                await self.request_service.update(r)
 
+        # سپس مدرک پزشکی
+            medical = r.data.get("medical_document")
+
+            if medical:
+               await self.bale.send_document(
+                chat_id=manager.bale_user_id,
+                file_id=medical["file_id"],
+                caption="📎 مدرک پزشکی"
+                )
 
 
     async def _format_list2(self, user_id: str, requests):
@@ -281,22 +392,33 @@ class RequestHandler:
             [
                 f"{key}: {value}"
                 for key, value in r.data.items()
+                if key != "medical_document"
             ]
-        )
+            )
 
-            user= await self.user_repository.get_by_id(r.user_id)
-            manager=await self.user_repository.get_by_id(r.manager_id)
+            user = await self.user_repository.get_by_id(r.user_id)
             message = (
             f"👤 کارمند: {user.first_name} {user.last_name}\n"
             f"📄 نوع درخواست: {r.type.value}\n"
             f"📝 جزئیات:\n{body_text}\n\n"
             f"📊 وضعیت: {r.status.value}\n"
-            f"زمان ثبت درخواست:{r.created_at}"
+            f"🕒 زمان ثبت درخواست: {r.created_at}"
             )
-            keyboard = None
+
+        # ابتدا اطلاعات درخواست
             await self.bale.send_message(
             user.bale_user_id,
-            message,
-            keyboard=keyboard
-        )
-           
+            message
+            )
+
+        # سپس مدرک پزشکی
+            medical = r.data.get("medical_document")
+
+            if medical:
+               await self.bale.send_document(
+                chat_id=user.bale_user_id,
+                file_id=medical["file_id"],
+                caption="📎 مدرک پزشکی"
+                )
+
+            

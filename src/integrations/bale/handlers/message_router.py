@@ -72,8 +72,6 @@ class MessageRouter:
 
              return
 
-
-
           if data.startswith("reject_request:"):
 
              request_id = data.split(":")[1]
@@ -336,16 +334,13 @@ class MessageRouter:
            text
         )
         
+        if await self.request_handler.is_in_flow(bale_user_id):
+           return await self.request_handler.handle_message(
+           bale_user_id,
+           message
+        )
 
         if text in ["LEAVE", "REMOTE", "OVERTIME", "MISSION"]:
-            return await self.request_handler.handle_message(bale_user_id, text)
-          
-        if await self.request_handler.is_in_flow(
-            bale_user_id
-        ):
-            return await self.request_handler.handle_message(
-                bale_user_id,
-                text
-            )
+            return await self.request_handler.handle_message(bale_user_id, message)
 
         return await self.user_handler.handle_start(bale_user_id)

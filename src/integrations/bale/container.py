@@ -21,7 +21,8 @@ from src.modules.reports.builder import ReportBuilder
 from src.modules.reports.calculator import ReportCalculator
 from src.integrations.kimai.client import KimaiClient
 from src.integrations.kimai.service import KimaiService
-
+from src.modules.logs.repository import LogRepository
+from src.modules.logs.service import LogService
 
 # =========================
 # BUILD APPLICATION GRAPH
@@ -40,6 +41,7 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     user_repository = UserRepository(db)
     request_repository = RequestRepository(db)
     department_repository = DepartmentRepository(db)
+    log_repository = LogRepository(db)
 
     kimai_client = KimaiClient(
     base_url=settings.KIMAI_BASE_URL,
@@ -51,9 +53,11 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     # -------------------------
     notification_service = NotificationService(bale_client)
     kimai_service = KimaiService(kimai_client)
+    log_service = LogService(log_repository)
     user_service = UserService(user_repository)
-    request_service = RequestService(request_repository, user_repository, department_repository,notification_service)
+    request_service = RequestService(request_repository, user_repository, department_repository,notification_service,log_service)
     report_service=ReportService(ReportCalculator(),ReportBuilder())
+    
     
     access_control_service = AccessControlService(
         user_repository,
@@ -77,8 +81,8 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
         bale_client=bale_client
     )
 
-    report_handler = ReportHandler(user_repository,department_repository,kimai_service,request_repository,bale_client)
-    time_entry_handler = TimeEntryHandler(kimai_service,user_repository,bale_client)
+    report_handler = ReportHandler(user_repository,department_repository,kimai_service,request_repository,bale_client,log_service)
+    time_entry_handler = TimeEntryHandler(kimai_service,user_repository,bale_client,log_service)
     # -------------------------
     # ROUTER (ENTRYPOINT)
     # -------------------------

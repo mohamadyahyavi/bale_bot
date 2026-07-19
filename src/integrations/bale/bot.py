@@ -19,9 +19,15 @@ http_client = httpx.AsyncClient(
 @bot.event
 async def on_message(update:Message):
 
-    await update.reply(update.content)
+    #await update.reply(update.content)
+
+    if update.document:
+       print(update.document)
+       print(dir(update.document))
 
     adapter = BaleUpdateAdapter(update)
+    print(type(update))
+    print(dir(update))
     data = adapter.to_dict()
 
     async for db in get_db():
