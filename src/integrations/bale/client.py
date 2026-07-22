@@ -50,39 +50,44 @@ class BaleClient:
     async def send_document(
     self,
     chat_id: str,
-    file_id: str,
+    file_bytes:bytes,
+    file_name:str,
     caption: str = None
 ):
 
       url = f"/bot{settings.BALE_BOT_TOKEN}/sendDocument"
 
-      payload = {
-        "chat_id": chat_id,
-        "document": file_id
+      data = {
+        "chat_id": str(chat_id),
     }
 
       if caption:
-        payload["caption"] = caption
+        data["caption"] = caption
 
+      files = {
+        "document": (
+            file_name,
+            file_bytes,
+            "application/octet-stream",
+        )
+    }
 
       print("DOCUMENT URL:", self.http.base_url, url)
-      print("DOCUMENT PAYLOAD:", payload)
-
 
       response = await self.http.post(
         url,
-        json=payload,
-        timeout=10
+        data=data,
+        files=files,
+        timeout=60,
     )
-
 
       print("STATUS:", response.status_code)
       print("BODY:", response.text)
 
-
       response.raise_for_status()
 
       return response.json()
+    
     
     async def edit_message(
     self,

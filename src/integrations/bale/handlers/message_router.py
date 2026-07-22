@@ -10,17 +10,19 @@ from .time_entry_handler import TimeEntryHandler
 from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
 from src.integrations.bale.keyboards import team_reports_keyboard,projects_keyboard,my_reports_keyboard
+from .overtime_report_handler import OvertimeReportHandler
 REJECT_SESSIONS = {}
 TIME_ENTRY_SESSIONS = {}
 
 
 class MessageRouter:
 
-    def __init__(self, user_handler:UserHandler,kimai_service:KimaiService,time_entry_handler:TimeEntryHandler, request_handler:RequestHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
+    def __init__(self, user_handler:UserHandler,kimai_service:KimaiService,time_entry_handler:TimeEntryHandler, request_handler:RequestHandler,overtime_report_handler: OvertimeReportHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
         self.user_handler = user_handler
         self.kimai_service = kimai_service
         self.time_entry_handler = time_entry_handler
         self.request_handler = request_handler
+        self.overtime_report_handler = overtime_report_handler
         self.access_control_service = access_control_service
         self.user_service = user_service
         self.report_handler = report_handler
@@ -186,58 +188,6 @@ class MessageRouter:
             )
 
         
-        if text == "درخواست های من":
-
-           return await self.request_handler.show_my_requests(str(user_id))
-        
-        if text == "درخواست های تیم":
-
-            if not accesses["is_manager"]:
-
-               raise PermissionError(
-              "You are not allowed to view team requests"
-              )
-            
-            return await self.request_handler.show_team_requests(
-                user_id
-            )
-        
-        if text == "مانده مرخصی من":
-
-           return await self.request_handler.remained_leave_hours(str(user_id))
-
-
-        if text == "همه درخواست های مرخصی":
-
-
-            if not accesses["role"]=="HR" or accesses["role"]=="CEO":
-                    return await self.user_handler.handle_start(user_id)
-            return await self.request_handler.show_all_leave_requests(user_id)
-
-        if text == "گزارش  منابع انسانی" :
-            if not accesses["role"]=="HR":
-               return await self.user_handler.handle_start(user_id)
-
-            return await self.report_handler.show_hr_reports(
-            user_id
-            )
-        
-        if text == "گزارش های تیم":
-
-            if not accesses["is_manager"]:
-
-               raise PermissionError(
-              "You are not allowed to view team requests"
-              )
-            
-            return await self.bale_client.send_message(
-            bale_user_id,
-            "نوع گزارش را انتخاب کنید:",
-            keyboard=team_reports_keyboard()
-            )
-
-            
-        
         if text == "گزارش روزانه تیم":
 
            if not accesses["is_manager"]:
@@ -272,6 +222,16 @@ class MessageRouter:
            return await self.report_handler.show_team_monthly_report(
             user_id
            )
+        if text == "گزارش های اضافه کاری":
+
+           if accesses["role"] != "HR":
+              return await self.user_handler.handle_start(
+              bale_user_id
+              )
+
+           return await self.overtime_report_handler.show_last_30_days_reports(
+           bale_user_id
+           )
 
 
         if text == "🔙 بازگشت":
@@ -300,6 +260,7 @@ class MessageRouter:
             return await self.report_handler.show_my_weekly_report(
                 user_id
             )
+        
         if text == "گزارش فعالیت ها":
 
            #if not accesses["is_manager"] or accesses["role"]=="HR" :
@@ -319,6 +280,17 @@ class MessageRouter:
             return await self.report_handler.my_today_status_report(
                 user_id
             )
+        
+        if text == "گزارش های اضافه کاری تیم":
+
+           if not accesses["is_manager"]:
+              raise PermissionError(
+              "You are not allowed to view team overtime reports"
+           )
+
+           return await self.overtime_report_handler.show_team_last_30_days_reports(
+           bale_user_id
+           )
 
         if text == "All Reports":
             if not permissions["can_view_all_reports"]:
@@ -327,12 +299,26 @@ class MessageRouter:
                 user_id
             )
         
+        if text == "ارسال گزارش اضافه کاری":
+
+           return await self.overtime_report_handler.start_flow(
+           bale_user_id
+           )
+        
 
         if await self.time_entry_handler.is_in_flow(bale_user_id):
            return await self.time_entry_handler.handle_message(
            bale_user_id,
            text
         )
+
+        if await self.overtime_report_handler.is_in_flow(
+            bale_user_id
+        ):
+            return await self.overtime_report_handler.handle_message(
+                bale_user_id,
+                message
+            )
         
         if await self.request_handler.is_in_flow(bale_user_id):
            return await self.request_handler.handle_message(

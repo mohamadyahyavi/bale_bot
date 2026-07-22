@@ -6,19 +6,25 @@ from src.integrations.bale.handlers.user_handler import UserHandler
 from src.integrations.bale.handlers.request_handler import RequestHandler
 from src.integrations.bale.handlers.report_handler import ReportHandler
 from src.integrations.bale.handlers.time_entry_handler import TimeEntryHandler
+from src.integrations.bale.handlers.overtime_report_handler import (
+     OvertimeReportHandler,
+)
 from src.modules.users.repository import UserRepository
 from src.modules.requests.repository import RequestRepository
 from src.modules.departments.repository import DepartmentRepository
+from src.modules.reports.repository import OvertimeReportRepository
 
 from src.modules.users.service import UserService
 from src.modules.requests.service import RequestService
 from src.modules.notifications.service import NotificationService
 from src.core.permissions.access_control import AccessControlService
 from src.core.permissions.permission_service import PermissionService
+
+from src.modules.reports.service import OvertimeReportService
 from src.core.config import settings
-from src.modules.reports.service import ReportService
-from src.modules.reports.builder import ReportBuilder
-from src.modules.reports.calculator import ReportCalculator
+#from src.modules.reports.service import ReportService
+#from src.modules.reports.builder import ReportBuilder
+#from src.modules.reports.model import ReportCalculator
 from src.integrations.kimai.client import KimaiClient
 from src.integrations.kimai.service import KimaiService
 from src.modules.logs.repository import LogRepository
@@ -27,7 +33,7 @@ from src.modules.logs.service import LogService
 # =========================
 # BUILD APPLICATION GRAPH
 # =========================
-def build_router(http_client, db: AsyncSession) -> MessageRouter:
+def build_router(http_client, db: AsyncSession,bot) -> MessageRouter:
 
     # -------------------------
     # CLIENTS
@@ -42,6 +48,7 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     request_repository = RequestRepository(db)
     department_repository = DepartmentRepository(db)
     log_repository = LogRepository(db)
+    overtime_report_repository = OvertimeReportRepository(db)
 
     kimai_client = KimaiClient(
     base_url=settings.KIMAI_BASE_URL,
@@ -56,7 +63,11 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
     log_service = LogService(log_repository)
     user_service = UserService(user_repository)
     request_service = RequestService(request_repository, user_repository, department_repository,notification_service,log_service)
-    report_service=ReportService(ReportCalculator(),ReportBuilder())
+    overtime_report_service = OvertimeReportService(
+        overtime_report_repository,
+        user_repository
+    )
+    #report_service=ReportService(ReportCalculator(),ReportBuilder())
     
     
     access_control_service = AccessControlService(
@@ -83,6 +94,12 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
 
     report_handler = ReportHandler(user_repository,department_repository,kimai_service,request_repository,bale_client,log_service)
     time_entry_handler = TimeEntryHandler(kimai_service,user_repository,bale_client,log_service)
+    overtime_report_handler = OvertimeReportHandler(
+        overtime_report_service=overtime_report_service,
+        user_repository=user_repository,
+        bale_client=bale_client,
+        bot=bot
+    )
     # -------------------------
     # ROUTER (ENTRYPOINT)
     # -------------------------
@@ -94,5 +111,6 @@ def build_router(http_client, db: AsyncSession) -> MessageRouter:
         access_control_service=access_control_service,
         user_service=user_service,
         report_handler=report_handler,
+        overtime_report_handler=overtime_report_handler,
         bale_client=bale_client
     )

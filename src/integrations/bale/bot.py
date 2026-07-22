@@ -34,7 +34,8 @@ async def on_message(update:Message):
 
         router = build_router(
             http_client,
-            db
+            db,
+            bot
         )
 
         await router.handle(data)
@@ -51,7 +52,8 @@ async def on_callback(callback):
 
         router = build_router(
             http_client,
-            db
+            db,
+            bot
         )
 
         await router.handle(data)

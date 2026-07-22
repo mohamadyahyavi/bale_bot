@@ -1,94 +1,78 @@
-from datetime import date
-from calendar import monthrange
+from uuid import UUID
 
-from src.integrations.kimai.service import KimaiService
-from src.modules.reports.calculator import ReportCalculator
-from src.modules.reports.builder import ReportBuilder
+from src.modules.reports.entity import OvertimeReport
+from src.modules.reports.repository import (
+    OvertimeReportRepository,
+)
+from src.modules.users.repository import UserRepository
+from src.modules.users.entity import User
 
-
-class ReportService:
+class OvertimeReportService:
 
     def __init__(
         self,
-        #kimai_service: KimaiService,
-        calculator: ReportCalculator,
-        builder: ReportBuilder
+        repository: OvertimeReportRepository,
+        user_repository: UserRepository,
     ):
-        #self.kimai = kimai_service
-        self.calc = calculator
-        self.builder = builder
+        self.repository = repository
+        self.user_repository = user_repository
 
-    # =========================
-    # DAILY REPORT
-    # =========================
-    async def daily(self, user, report_date: date):
+    async def create_report(
+        self,
+        bale_user_id: str,
+        title: str,
+        report_file: bytes,
+    ):
 
-        logs = await self.kimai.get_user_worklogs(
-            user.kimai_user_id,
-            report_date,
-            report_date
+        user = await self.user_repository.get_by_bale_id(
+            bale_user_id
         )
 
-        worked = self.calc.worked_hours(logs)
-        missing = self.calc.missing_hours(worked)
-        overtime = self.calc.overtime_hours(worked)
+        if not user:
+            raise Exception("User not found")
 
-        open_timer = await self.kimai.has_open_timer(
-            user.kimai_user_id
+        report = OvertimeReport(
+            id=None,
+            user_id=user.id,
+            file_name=title,
+            report_file=report_file,
         )
 
-        return self.builder.build_daily(
-            user=user,
-            logs=logs,
-            worked=worked,
-            missing=missing,
-            overtime=overtime,
-            open_timer=open_timer
+        return await self.repository.create(report)
+
+
+    async def get_report(
+        self,
+        report_id: UUID,
+    ):
+
+        return await self.repository.get_by_id(
+            report_id
+        )
+    
+    async def get_last_30_days_reports(self):
+
+        return await self.repository.get_last_30_days_reports()
+
+
+    async def get_user_reports(
+        self,
+        user_id: UUID,
+    ):
+
+        return await self.repository.get_by_user(
+            user_id
+        )
+    
+    async def get_team_last_30_days_reports(self,bale_user_id):
+
+        manager = await self.user_repository.get_by_bale_id(
+            bale_user_id
         )
 
-    # =========================
-    # WEEKLY REPORT
-    # =========================
-    async def weekly(self, user, start_date, end_date):
+        if manager is None:
+            raise Exception("Manager not found")
 
-        logs = await self.kimai.get_user_worklogs(
-            user.kimai_user_id,
-            start_date,
-            end_date
-        )
-
-        worked = self.calc.worked_hours(logs)
-
-        return self.builder.build_weekly(
-            user=user,
-            logs=logs,
-            worked=worked,
-            missing=self.calc.missing_hours(worked),
-            overtime=self.calc.overtime_hours(worked)
-        )
-
-    # =========================
-    # MONTHLY REPORT
-    # =========================
-    async def monthly(self, user, month: int, year: int):
-
-        last_day = monthrange(year, month)[1]
-
-        start_date = f"{year}-{month:02d}-01"
-        end_date = f"{year}-{month:02d}-{last_day}"
-
-        logs = await self.kimai.get_user_worklogs(
-            user.kimai_user_id,
-            start_date,
-            end_date
-        )
-
-        worked = self.calc.worked_hours(logs)
-
-        return self.builder.build_monthly(
-            user=user,
-            logs=logs,
-            worked=worked,
-            missing=self.calc.missing_hours(worked),
-            overtime=self.calc.overtime_hours(worked)
+        return await self.repository.get_last_30_days_team_reports(
+            manager.id
         )

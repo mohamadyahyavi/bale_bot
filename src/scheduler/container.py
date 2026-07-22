@@ -10,7 +10,7 @@ from src.jobs.contract_expiry import ContractExpiryJob
 from src.modules.notifications.service import NotificationService
 
 from src.modules.reports.service import ReportService
-from src.modules.reports.calculator import ReportCalculator
+from src.modules.reports.model import ReportCalculator
 from src.modules.reports.builder import ReportBuilder
 
 from src.jobs.work_start_reminder import WorkStartReminderJob
