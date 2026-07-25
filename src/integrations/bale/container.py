@@ -9,6 +9,10 @@ from src.integrations.bale.handlers.time_entry_handler import TimeEntryHandler
 from src.integrations.bale.handlers.overtime_report_handler import (
      OvertimeReportHandler,
 )
+from src.integrations.bale.handlers.user_registry_handler import (
+    UserRegistrationHandler,
+)
+
 from src.modules.users.repository import UserRepository
 from src.modules.requests.repository import RequestRepository
 from src.modules.departments.repository import DepartmentRepository
@@ -100,11 +104,17 @@ def build_router(http_client, db: AsyncSession,bot) -> MessageRouter:
         bale_client=bale_client,
         bot=bot
     )
+
+    user_registration_handler = UserRegistrationHandler(
+    user_service=user_service,
+    bale_client=bale_client,
+)
     # -------------------------
     # ROUTER (ENTRYPOINT)
     # -------------------------
     return MessageRouter(
         user_handler=user_handler,
+        user_registration_handler=user_registration_handler,
         kimai_service=kimai_service,
         time_entry_handler=time_entry_handler,
         request_handler=request_handler,

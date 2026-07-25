@@ -2,7 +2,7 @@ from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
 from src.modules.users.service import UserService
 from src.integrations.bale.client import BaleClient as bale
-from src.integrations.bale.keyboards import employee_keyboard,hr_keyboard,ceo_keyboard,manager_keyboard,my_reports_keyboard
+from src.integrations.bale.keyboards import employee_keyboard,hr_keyboard,ceo_keyboard,manager_keyboard,my_reports_keyboard,admin_keyboard
 class UserHandler:
 
     def __init__(self, user_service:UserService,access_control_service:AccessControlService, bale_client:bale):
@@ -36,13 +36,15 @@ class UserHandler:
 
         if context["role"] == "CEO":
             return ceo_keyboard()
+
+        if context["role"] == "ADMIN":
+           return admin_keyboard()
+
+        if context["role"] == "HR":
+                    return hr_keyboard()
         
         if context["is_manager"]:
             return manager_keyboard() 
-        
-
-        if context["role"] == "HR":
-            return hr_keyboard()
      
               
         return employee_keyboard()

@@ -3,6 +3,7 @@ from .enums import LogAction, LogResult
 
 
 
+
 class LogService:
 
 
@@ -74,3 +75,7 @@ class LogService:
             result=LogResult.FAILED,
             description=description,
         )
+
+    async def get_last_30_days_logs(self):
+
+        return await self.repository.get_last_30_days_logs()

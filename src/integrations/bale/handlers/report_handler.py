@@ -449,6 +449,40 @@ class ReportHandler:
     # =========================
     # ALL REPORTS (ADMIN)
     # =========================
+    async def show_logs(
+    self,
+    bale_user_id: str,
+):
+
+       logs = await self.log_service.get_last_30_days_logs()
+
+       if not logs:
+
+        return await self.bale.send_message(
+            bale_user_id,
+            "No operation logs found in the last 30 days."
+        )
+
+       for log in logs:
+
+        user = await self.user_repository.get_by_id(
+            log.user_id
+        )
+
+        text = (
+            f"👤 User: {user.first_name} {user.last_name}\n"
+            f"⚙️ Action: {log.action}\n"
+            f"✅ Result: {log.result}\n"
+            f"📝 Description: {log.description or '-'}\n"
+            f"🕒 Time: {log.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+        await self.bale.send_message(
+            bale_user_id,
+            text
+        )
+
+
     async def show_all_reports(self, user_id: str):
 
         users = await self.user_service.get_active_users()

@@ -19,6 +19,13 @@ class UserService:
         return await self.user_repository.get_by_bale_id(
             bale_user_id
         )
+
+    async def create_user(
+    self,
+    user: User,
+):
+
+       return await self.user_repository.create(user)
     
     async def get_by_id(self,user_id):
 

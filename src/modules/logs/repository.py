@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from datetime import datetime, timedelta
 
 from .model import OperationLog
 
@@ -64,5 +65,23 @@ class LogRepository:
             .limit(limit)
         )
 
+
+        return result.scalars().all()
+
+    async def get_last_30_days_logs(self):
+
+        from_date = datetime.now() - timedelta(days=30)
+
+        stmt = (
+        select(OperationLog)
+        .where(
+            OperationLog.created_at >= from_date
+        )
+        .order_by(
+            OperationLog.created_at.desc()
+        )
+    )
+
+        result = await self.session.execute(stmt)
 
         return result.scalars().all()

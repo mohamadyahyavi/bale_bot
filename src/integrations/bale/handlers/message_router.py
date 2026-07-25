@@ -11,14 +11,16 @@ from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
 from src.integrations.bale.keyboards import team_reports_keyboard,projects_keyboard,my_reports_keyboard
 from .overtime_report_handler import OvertimeReportHandler
+from .user_registry_handler import UserRegistrationHandler
 REJECT_SESSIONS = {}
 TIME_ENTRY_SESSIONS = {}
 
 
 class MessageRouter:
 
-    def __init__(self, user_handler:UserHandler,kimai_service:KimaiService,time_entry_handler:TimeEntryHandler, request_handler:RequestHandler,overtime_report_handler: OvertimeReportHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
+    def __init__(self, user_handler:UserHandler,user_registration_handler: UserRegistrationHandler,kimai_service:KimaiService,time_entry_handler:TimeEntryHandler, request_handler:RequestHandler,overtime_report_handler: OvertimeReportHandler,access_control_service: AccessControlService,user_service: UserService,report_handler:ReportHandler,bale_client:BaleClient):
         self.user_handler = user_handler
+        self.user_registration_handler = user_registration_handler
         self.kimai_service = kimai_service
         self.time_entry_handler = time_entry_handler
         self.request_handler = request_handler
@@ -210,8 +212,10 @@ class MessageRouter:
            return await self.report_handler.show_team_weekly_report(
                user_id
            )
+        
+        if text == "درخواست های تیم":
 
-
+            return await self.request_handler.show_team_requests(user_id)
 
 
         if text == "گزارش ماهانه تیم":
@@ -248,6 +252,34 @@ class MessageRouter:
             "نوع گزارش را انتخاب کنید:",
             keyboard=my_reports_keyboard()
             )
+
+        if text == "مشاهده لاگ ها" :
+           return await self.report_handler.show_logs(bale_user_id)
+
+        if text == "افزودن کاربر جدید":
+
+           if accesses["role"] != "ADMIN":
+              return await self.user_handler.handle_start(
+              bale_user_id
+           )
+
+           return await self.user_registration_handler.start_flow(
+           bale_user_id
+           )
+
+               
+        if text =="گزارش منابع انسانی":
+
+            return await self.report_handler.show_hr_reports(user_id)
+        
+        if text == "گزارش های تیم":
+
+            return await self.bale_client.send_message(
+            bale_user_id,
+            "نوع گزارش را انتخاب کنید:",
+            keyboard=team_reports_keyboard()
+            )
+
 
         if text == "گزارش ماهانه":
         
@@ -325,6 +357,9 @@ class MessageRouter:
            bale_user_id,
            message
         )
+
+        if await self.user_registration_handler.is_in_flow(bale_user_id):
+           return await self.user_registration_handler.handle_message(bale_user_id,message)
 
         if text in ["LEAVE", "REMOTE", "OVERTIME", "MISSION"]:
             return await self.request_handler.handle_message(bale_user_id, message)

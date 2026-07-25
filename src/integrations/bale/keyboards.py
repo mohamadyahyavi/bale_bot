@@ -13,6 +13,28 @@ def request_types_keyboard():
     }
 
 
+def leave_types_keyboard():
+
+    keyboard = MenuKeyboardMarkup()
+
+    keyboard.add(
+        MenuKeyboardButton("DAILY"),
+        row=1
+    )
+
+    keyboard.add(
+        MenuKeyboardButton("HOURLY"),
+        row=1
+    )
+
+    keyboard.add(
+        MenuKeyboardButton("SICK"),
+        row=2
+    )
+
+    return keyboard
+
+
 def request_action_keyboard(request_id):
 
     return {
@@ -113,7 +135,45 @@ def my_reports_keyboard():
     return keyboard
 
 
-     
+def admin_keyboard():
+
+    keyboard = MenuKeyboardMarkup()
+
+    keyboard.add(
+        MenuKeyboardButton("افزودن کاربر جدید"),
+        row=1
+    )
+
+    keyboard.add(
+            MenuKeyboardButton("ثبت ساعت و پروژه"),
+            row=1
+        )
+    
+    keyboard.add(
+            MenuKeyboardButton("ثبت درخواست جدید"),
+            row=2
+        )
+    keyboard.add(
+            MenuKeyboardButton("گزارش های من"),
+            row=2
+        )
+    
+    keyboard.add(
+            MenuKeyboardButton("مانده مرخصی من"),
+            row=3
+        )
+    keyboard.add(
+            MenuKeyboardButton("کارکرد و تاخیر های من"),
+            row=3
+        )
+    
+    keyboard.add(
+            MenuKeyboardButton("ارسال گزارش اضافه کاری"),
+            row=4
+        )
+    
+
+    return keyboard     
 
 def employee_keyboard():
 
@@ -200,6 +260,7 @@ def hr_keyboard():
     keyboard.add(MenuKeyboardButton("وضعیت امروز من"), row=5)
     keyboard.add(MenuKeyboardButton("گزارش فعالیت ها"), row=5)
     keyboard.add(MenuKeyboardButton("گزارش های اضافه کاری"), row=6)
+    keyboard.add(MenuKeyboardButton("مشاهده لاگ ها"),row=6)
 
 
     return keyboard

@@ -29,16 +29,13 @@ class UserModel(Base):
 
     is_active = Column(Boolean, default=True, nullable=False)
 
-
     email = Column(String(255), nullable=True)
 
     mobile = Column(String(20), nullable=True)
 
-
     contract_start_date = Column(Date, nullable=True)
 
     contract_end_date = Column(Date, nullable=True)
-
 
     total_leave_hours = Column(Integer, default=0, nullable=False)
 

@@ -47,6 +47,36 @@ class UserRepository:
 
 
 
+    async def create(
+    self,
+    user: User,
+):
+
+        model = UserModel(
+        bale_user_id=user.bale_user_id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email,
+        mobile=user.mobile,
+        department_id=user.department_id,
+        kimai_user_id=user.kimai_user_id,
+        contract_start_date=user.contract_start_date,
+        contract_end_date=user.contract_end_date,
+        is_active=user.is_active,
+        total_leave_hours=user.total_leave_hours,
+        access_level=user.access_level,
+    )
+
+        self.session.add(model)
+
+        await self.session.commit()
+
+        await self.session.refresh(model)
+
+        return self._to_entity(model)
+
+
+
     async def get_by_bale_id(self, bale_user_id: str):
 
         stmt = select(UserModel).where(

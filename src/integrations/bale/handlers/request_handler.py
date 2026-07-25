@@ -1,4 +1,4 @@
-from src.integrations.bale.keyboards import request_types_keyboard,request_action_keyboard
+from src.integrations.bale.keyboards import request_types_keyboard,request_action_keyboard,leave_types_keyboard
 from src.modules.requests.enums import RequestType,RequestStatus
 from src.integrations.bale.client import BaleClient
 from .request_form_engine import RequestFormEngine
@@ -100,7 +100,6 @@ class RequestHandler:
                 "document"
             )
 
-
             if not document:
 
                 return await self.bale.send_message(
@@ -139,8 +138,9 @@ class RequestHandler:
 
 
                 if current_step in [
-                    "start_datetime",
-                    "end_datetime"
+                    "start_date",
+                    "end_date",
+                    "date"
                 ]:
 
                     return await self.bale.send_message(
@@ -182,9 +182,22 @@ class RequestHandler:
             # =========================
 
             if current_step == "leave_type":
-                session["data"][current_step] = text.strip().upper()
+
+              leave_type = text.strip().upper()
+
+              session["data"]["leave_type"] = leave_type
+
+              if leave_type == "HOURLY":
+                 session["step"] = "date"
+
+              else:
+                session["step"] = "start_date"
+
+              return await self._ask_next(bale_user_id)
+
             else:
-                session["data"][current_step] = text
+
+               session["data"][current_step] = text
 
 
 
@@ -192,20 +205,66 @@ class RequestHandler:
             # CHECK SICK LEAVE
             # =========================
 
-            if (
-                current_step == "reason"
-                and session["data"].get("leave_type") == "SICK"
-            ):
+            leave_type = session["data"].get("leave_type")
 
-                next_step = "medical_document"
+
+            if leave_type == "HOURLY":
+
+               if current_step == "date":
+                  next_step = "start_time"
+
+               elif current_step == "start_time":
+                    next_step = "end_time"
+
+               elif current_step == "end_time":
+                    next_step = "reason"
+
+               elif current_step == "reason":
+                    next_step = None
+
+               else:
+                 next_step = None
+
+
+            elif leave_type == "DAILY":
+
+              if current_step == "start_date":
+                next_step = "end_date"
+
+              elif current_step == "end_date":
+                next_step = "reason"
+
+              elif current_step == "reason":
+                next_step = None
+
+              else:
+                next_step = None
+
+
+            elif leave_type == "SICK":
+
+              if current_step == "start_date":
+                 next_step = "end_date"
+
+              elif current_step == "end_date":
+                 next_step = "reason"
+
+              elif current_step == "reason":
+                 next_step = "medical_document"
+
+              elif current_step == "medical_document":
+                   next_step = None
+
+              else:
+                next_step = None
 
 
             else:
 
-                next_step = self.engine.get_next_step(
-                    session["type"],
-                    current_step
-                )
+              next_step = self.engine.get_next_step(
+              session["type"],
+              current_step
+              )
 
 
 
@@ -265,7 +324,15 @@ class RequestHandler:
             session["step"]
         )
 
-
+        if (
+        session["type"] == RequestType.LEAVE
+        and session["step"] == "leave_type"
+    ):
+            return await self.bale.send_message(
+            bale_user_id,
+            question,
+            keyboard=leave_types_keyboard()
+        )
         return await self.bale.send_message(
             bale_user_id,
             question
@@ -371,7 +438,7 @@ class RequestHandler:
             medical = r.data.get("medical_document")
 
             if medical:
-               await self.bale.send_document(
+               await self.bale.send_document_by_file_id(
                 chat_id=manager.bale_user_id,
                 file_id=medical["file_id"],
                 caption="📎 مدرک پزشکی"
