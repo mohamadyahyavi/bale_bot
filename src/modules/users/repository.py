@@ -156,8 +156,6 @@ class UserRepository:
             
         ]
     
-
-
     async def get_active_users(self):
 
         stmt = select(UserModel).where(

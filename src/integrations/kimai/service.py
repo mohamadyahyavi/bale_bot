@@ -397,6 +397,7 @@ class KimaiService:
        self,
        kimai_user_id: int,
        ):
+        
         now = datetime.now()
 
         begin = datetime(

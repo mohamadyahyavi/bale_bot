@@ -36,6 +36,8 @@ def setup_scheduler(
         day_of_week=["mon","tue","wed","thu","sat","sun"],
         name="start_work"
     )
+
+
     scheduler.add_cron_job(
         func=finish_work_job.run,
         hour=18,
@@ -66,7 +68,7 @@ def setup_scheduler(
 
     scheduler.add_cron_job(
       func=contract_expiry_job.run,
-      hour=10,
+      hour=12,
       minute=0,
       day_of_week=["mon","tue","wed","thu","sat","sun"],
       name="contract_expiry"
@@ -74,7 +76,7 @@ def setup_scheduler(
 
     scheduler.add_cron_job(
     func=pending_requests_job.run,
-    hour=12,
+    hour=13,
     minute=0,
     day_of_week=["mon","tue","wed","thu","sat","sun"],
     name="pending_requests"

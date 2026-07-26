@@ -9,9 +9,9 @@ from src.modules.users.repository import UserRepository
 from src.jobs.contract_expiry import ContractExpiryJob
 from src.modules.notifications.service import NotificationService
 
-from src.modules.reports.service import ReportService
-from src.modules.reports.model import ReportCalculator
-from src.modules.reports.builder import ReportBuilder
+#from src.modules.reports.service import ReportService
+#from src.modules.reports.model import ReportCalculator
+#from src.modules.reports.builder import ReportBuilder
 
 from src.jobs.work_start_reminder import WorkStartReminderJob
 from src.jobs.missing_hours import MissingHoursJob
@@ -71,13 +71,6 @@ def build_scheduler_jobs(
        kimai_client
     )
 
-
-    report_service = ReportService(
-       # kimai_service,
-        ReportCalculator(),
-        ReportBuilder()
-    )
-
     # =========================
     # JOBS
     # =========================
@@ -90,7 +83,7 @@ def build_scheduler_jobs(
 
     missing_hours_job = MissingHoursJob(
         session_factory,
-        report_service,
+        kimai_service,
         notification_service
     )
 
