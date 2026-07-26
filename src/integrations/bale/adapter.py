@@ -60,6 +60,10 @@ class BaleUpdateAdapter:
         # -------------------------
         elif hasattr(self.update, "data"):
 
+            print(type(self.update))
+            print(self.update)
+            print(dir(self.update))
+
             user = self.update.from_user
 
             result["callback_query"] = {

@@ -6,7 +6,8 @@ def request_types_keyboard():
     return {
         "keyboard": [
             ["LEAVE", "REMOTE"],
-            ["OVERTIME", "MISSION"]
+            ["OVERTIME", "MISSION"],
+            ["🔙 بازگشت"]
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
@@ -31,6 +32,10 @@ def leave_types_keyboard():
         MenuKeyboardButton("SICK"),
         row=2
     )
+    keyboard.add(
+            MenuKeyboardButton("🔙 بازگشت"),
+            row=2
+        )
 
     return keyboard
 

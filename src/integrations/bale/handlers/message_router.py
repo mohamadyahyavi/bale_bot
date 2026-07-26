@@ -10,10 +10,18 @@ from .time_entry_handler import TimeEntryHandler
 from src.core.permissions.permission_service import PermissionService
 from src.core.permissions.access_control import AccessControlService
 from src.integrations.bale.keyboards import team_reports_keyboard,projects_keyboard,my_reports_keyboard
+from src.integrations.bale.calendar_keyboard import (
+    leave_calendar_keyboard,
+    previous_month,
+    next_month,
+)
 from .overtime_report_handler import OvertimeReportHandler
 from .user_registry_handler import UserRegistrationHandler
+from src.integrations.bale.handlers.request_handler import REQUEST_SESSIONS
+
 REJECT_SESSIONS = {}
 TIME_ENTRY_SESSIONS = {}
+#REQUEST_SESSIONS = {}
 
 
 class MessageRouter:
@@ -51,7 +59,142 @@ class MessageRouter:
              return
           
           if not data:
-              return 
+              return
+
+          if data.startswith("cal_prev:"):
+
+             _, year, month = data.split(":")
+        
+             year = int(year)
+             month = int(month)
+
+             year, month = previous_month(year, month)
+
+             return await self.bale_client.send_message(
+                          bale_user_id,
+                          "📅 تاریخ را انتخاب کنید:",
+                          keyboard=leave_calendar_keyboard(year, month))
+
+          if data.startswith("cal_next:"):
+
+             _, year, month = data.split(":")
+
+             year = int(year)
+             month = int(month)
+
+             year, month = next_month(year, month)
+
+             return await self.bale_client.send_message(
+             bale_user_id,
+             "📅 تاریخ را انتخاب کنید:",
+             keyboard=leave_calendar_keyboard(year, month)
+    )
+          if data.startswith("cal_day:"):
+              print("ENTERED CAL_DAY")
+
+              session = REQUEST_SESSIONS.get(bale_user_id)
+
+              print("SESSION =", session)
+
+              if not session:
+                 print("SESSION IS NONE")
+                 return
+
+              print("CURRENT STEP =", session["step"])
+
+              _, year, month, day = data.split(":")
+
+              selected_date = f"{year}-{int(month):02d}-{int(day):02d}"
+
+              session = REQUEST_SESSIONS.get(bale_user_id)
+
+              if not session:
+                 return
+
+              current_step = session["step"]
+
+    # ذخیره تاریخ انتخاب شده
+              session["data"][current_step] = selected_date
+
+              leave_type = session["data"].get("leave_type")
+
+              if leave_type == "HOURLY":
+
+                 if current_step == "date":
+                    next_step = "start_time"
+
+                 elif current_step == "start_time":
+                      next_step = "end_time"
+
+                 elif current_step == "end_time":
+                      next_step = "reason"
+
+                 elif current_step == "reason":
+                      next_step = None
+
+                 else:
+                    next_step = None
+
+              elif leave_type == "DAILY":
+
+                if current_step == "start_date":
+                   next_step = "end_date"
+
+                elif current_step == "end_date":
+                     next_step = "reason"
+
+                elif current_step == "reason":
+                     next_step = None
+
+                else:
+                     next_step = None
+
+              elif leave_type == "SICK":
+
+                if current_step == "start_date":
+                   next_step = "end_date"
+
+                elif current_step == "end_date":
+                     next_step = "reason"
+
+                elif current_step == "reason":
+                     next_step = "medical_document"
+
+                elif current_step == "medical_document":
+                     next_step = None
+
+                else:
+                    next_step = None
+
+              else:
+                next_step = self.request_handler.engine.get_next_step(
+                session["type"],
+                current_step
+                )
+
+              
+              if next_step is None:
+
+                await self.request_handler.request_service.create_request(
+                bale_user_id=bale_user_id,
+                request_type=session["type"],
+                body=session["data"]
+                )
+
+                REQUEST_SESSIONS.pop(bale_user_id, None)
+
+                return await self.bale_client.send_message(
+                bale_user_id,
+                "Request submitted ✔️"
+                )
+
+    # رفتن به مرحله بعد
+              session["step"] = next_step
+
+              return await self.request_handler._ask_next(
+              bale_user_id
+              )
+           
 
           if data.startswith("approve_request:"):
 

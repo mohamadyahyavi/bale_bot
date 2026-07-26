@@ -112,6 +112,7 @@ def build_router(http_client, db: AsyncSession,bot) -> MessageRouter:
     # -------------------------
     # ROUTER (ENTRYPOINT)
     # -------------------------
+    print ("BUILD ROUTER")
     return MessageRouter(
         user_handler=user_handler,
         user_registration_handler=user_registration_handler,

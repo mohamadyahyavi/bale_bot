@@ -4,6 +4,8 @@ from src.integrations.bale.client import BaleClient
 from .request_form_engine import RequestFormEngine
 from src.modules.requests.service import RequestService
 from src.modules.users.repository import UserRepository
+from src.integrations.bale.calendar_keyboard import leave_calendar_keyboard
+from datetime import datetime
 
 REQUEST_SESSIONS = {}
 class RequestHandler:
@@ -18,6 +20,8 @@ class RequestHandler:
         self.user_repository=user_repository
         self.bale = bale_client
         self.engine = RequestFormEngine()
+        print("REQUEST_HANDLER CREATED", id(self))
+        print("SESSION DICT =", id(REQUEST_SESSIONS))
 
         # session storage (later Redis)
         
@@ -41,6 +45,11 @@ class RequestHandler:
             "data": {}
         }
 
+        print("AFTER START =", REQUEST_SESSIONS)
+
+        print("START FLOW SESSION =", REQUEST_SESSIONS)
+        print("START FLOW ID =", id(REQUEST_SESSIONS))
+
         return await self.bale.send_message(
             bale_user_id,
             "Select request type:",
@@ -53,6 +62,9 @@ class RequestHandler:
     async def handle_message(self, bale_user_id: str, message: dict):
 
         session = REQUEST_SESSIONS.get(bale_user_id)
+
+        print("HANDLE_MESSAGE")
+        print("DICT =", REQUEST_SESSIONS)
 
         if not session:
             return await self.bale.send_message(
@@ -85,6 +97,10 @@ class RequestHandler:
 
             session["type"] = RequestType(text)
             session["step"] = self.engine.get_first_step(text)
+            print("HANDLE MESSAGE SESSION =", REQUEST_SESSIONS)
+            print("HANDLE MESSAGE ID =", id(REQUEST_SESSIONS))
+            print("TYPE =", session["type"])
+            print("FIRST STEP =", session["step"])
 
             return await self._ask_next(bale_user_id)
 
@@ -150,7 +166,16 @@ class RequestHandler:
                         "2026-06-30 16:00:00"
                     )
 
-
+                if current_step in [
+                  "start_time",
+                  "end_time"
+                ]:
+                    return await self.bale.send_message(
+                    bale_user_id,
+                    "❌ Invalid time format.\n\n"
+                    "Please use this format:\n"
+                    "09:30"
+                    )
 
                 if current_step == "leave_type":
 
@@ -281,7 +306,8 @@ class RequestHandler:
                 body=session["data"]
             )
 
-
+            print("POP SESSION")
+            print(REQUEST_SESSIONS)
             REQUEST_SESSIONS.pop(
                 bale_user_id,
                 None
@@ -333,6 +359,25 @@ class RequestHandler:
             question,
             keyboard=leave_types_keyboard()
         )
+
+
+        if session["step"] in [
+        "start_date",
+        "end_date",
+        "date"
+    ]:
+
+            now = datetime.now()
+
+            return await self.bale.send_message(
+            bale_user_id,
+            question,
+            keyboard=leave_calendar_keyboard(
+                now.year,
+                now.month
+            )
+        )
+
         return await self.bale.send_message(
             bale_user_id,
             question
